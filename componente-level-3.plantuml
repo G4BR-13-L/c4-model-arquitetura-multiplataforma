@@ -1,0 +1,41 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+title Rental Service - Componentes
+
+Container_Boundary(rental_service, "Rental Service") {
+
+Component(rental_api, "Rental API", "REST Controller", "Recebe requisições")
+
+Component(rental_application, "Rental Application Service", "Application Layer", "Orquestra regras de negócio")
+
+Component(reservation_engine, "Reservation Engine", "Domain Service", "Gerencia disponibilidade")
+
+Component(pricing_service, "Pricing Service", "Domain Service", "Calcula preços")
+
+Component(contract_service, "Contract Service", "Domain Service", "Gera contratos")
+
+Component(rental_repository, "Rental Repository", "Repository", "Persistência")
+
+Component(event_publisher, "Event Publisher", "Messaging", "Publica eventos")
+
+}
+
+ContainerDb(rental_db, "Rental DB", "PostgreSQL")
+
+Container(message_broker, "Message Broker", "Kafka")
+
+Rel(rental_api, rental_application, "Usa")
+
+Rel(rental_application, reservation_engine, "Consulta disponibilidade")
+Rel(rental_application, pricing_service, "Calcula preço")
+Rel(rental_application, contract_service, "Cria contrato")
+
+Rel(rental_application, rental_repository, "Salva reserva")
+
+Rel(rental_repository, rental_db, "R/W")
+
+Rel(rental_application, event_publisher, "Publica eventos")
+Rel(event_publisher, message_broker, "Envia evento")
+
+@enduml

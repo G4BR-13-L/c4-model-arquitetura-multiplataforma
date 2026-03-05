@@ -1,0 +1,62 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+title Plataforma de Locação - Containers
+
+Person(customer, "Cliente")
+Person(admin, "Administrador")
+
+System_Boundary(system, "Plataforma de Locação") {
+
+Container(web_app, "Web App", "React / SPA", "Interface do usuário")
+
+Container(mobile_app, "Mobile App", "Flutter", "Aplicativo móvel")
+
+Container(api_gateway, "API Gateway", "Kong / Nginx", "Ponto de entrada das APIs")
+
+Container(auth_service, "Auth Service", "Auth Server", "Autenticação e autorização")
+
+Container(user_service, "User Service", "Backend Service", "Gerenciamento de usuários")
+
+Container(vehicle_service, "Vehicle Service", "Backend Service", "Gerenciamento de veículos")
+
+Container(rental_service, "Rental Service", "Backend Service", "Reservas e contratos")
+
+Container(payment_service, "Payment Service", "Backend Service", "Orquestra pagamentos")
+
+Container(notification_service, "Notification Service", "Worker Service", "Envio de emails e SMS")
+
+ContainerDb(user_db, "User DB", "PostgreSQL")
+ContainerDb(vehicle_db, "Vehicle DB", "PostgreSQL")
+ContainerDb(rental_db, "Rental DB", "PostgreSQL")
+
+Container(cache, "Cache", "Redis")
+
+Container(message_broker, "Message Broker", "Kafka / RabbitMQ")
+
+}
+
+Rel(customer, web_app, "Usa")
+Rel(customer, mobile_app, "Usa")
+Rel(admin, web_app, "Administra")
+
+Rel(web_app, api_gateway, "HTTPS")
+Rel(mobile_app, api_gateway, "HTTPS")
+
+Rel(api_gateway, auth_service, "Auth requests")
+Rel(api_gateway, user_service, "User API")
+Rel(api_gateway, vehicle_service, "Vehicle API")
+Rel(api_gateway, rental_service, "Rental API")
+Rel(api_gateway, payment_service, "Payment API")
+
+Rel(user_service, user_db, "R/W")
+Rel(vehicle_service, vehicle_db, "R/W")
+Rel(rental_service, rental_db, "R/W")
+
+Rel(rental_service, message_broker, "Publica eventos")
+Rel(notification_service, message_broker, "Consome eventos")
+
+Rel(user_service, cache, "Cache")
+Rel(vehicle_service, cache, "Cache")
+
+@enduml

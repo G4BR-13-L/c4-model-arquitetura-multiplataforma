@@ -1,0 +1,62 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Deployment.puml
+
+title Plataforma de Locação - Deployment
+
+Deployment_Node(cdn, "CDN", "Cloudflare") {
+    Container(web_static, "Web Static Assets")
+}
+
+Deployment_Node(lb, "Load Balancer", "Cloud") {
+    Container(api_gateway, "API Gateway")
+}
+
+Deployment_Node(k8s_cluster, "Kubernetes Cluster") {
+
+    Deployment_Node(namespace_backend, "Backend Namespace") {
+
+        Container(auth_service, "Auth Service")
+        Container(user_service, "User Service")
+        Container(vehicle_service, "Vehicle Service")
+        Container(rental_service, "Rental Service")
+        Container(payment_service, "Payment Service")
+        Container(notification_service, "Notification Service")
+
+    }
+
+    Deployment_Node(namespace_infra, "Infra Namespace") {
+
+        Container(redis, "Redis Cache")
+
+        Container(message_broker, "Kafka Cluster")
+
+    }
+
+}
+
+Deployment_Node(database_cluster, "Database Cluster") {
+
+    ContainerDb(user_db, "User DB", "PostgreSQL")
+
+    ContainerDb(vehicle_db, "Vehicle DB", "PostgreSQL")
+
+    ContainerDb(rental_db, "Rental DB", "PostgreSQL")
+
+}
+
+Rel(api_gateway, auth_service, "Auth")
+Rel(api_gateway, user_service, "Users")
+Rel(api_gateway, vehicle_service, "Vehicles")
+Rel(api_gateway, rental_service, "Rentals")
+
+Rel(user_service, user_db, "SQL")
+Rel(vehicle_service, vehicle_db, "SQL")
+Rel(rental_service, rental_db, "SQL")
+
+Rel(rental_service, message_broker, "Eventos")
+Rel(notification_service, message_broker, "Consome")
+
+Rel(user_service, redis, "Cache")
+Rel(vehicle_service, redis, "Cache")
+
+@enduml
