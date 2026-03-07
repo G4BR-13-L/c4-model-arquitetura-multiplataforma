@@ -4,19 +4,17 @@
 title Plataforma de Locação de Carros - Diagrama de Contexto
 
 Person(customer, "Cliente", "Pessoa que aluga carros")
-Person(admin, "Administrador", "Gerencia frota, preços e contratos")
+Person(operador, "Operador", "Gerencia frota, preços e contratos")
 
 System(car_rental, "Plataforma de Locação de Carros", "Sistema online para reserva e gestão de veículos")
 
 System_Ext(payment_gateway, "Gateway de Pagamento", "Processa pagamentos")
-System_Ext(identity_provider, "Identity Provider", "Serviço de autenticação externo")
 System_Ext(notification_service, "Serviço de Notificações", "Envio de email e SMS")
 
 Rel(customer, car_rental, "Busca carros e realiza reservas")
-Rel(admin, car_rental, "Administra frota e contratos")
+Rel(operador, car_rental, "Administra frota e contratos")
 
 Rel(car_rental, payment_gateway, "Processa pagamento")
-Rel(car_rental, identity_provider, "Autentica usuários")
 Rel(car_rental, notification_service, "Envia notificações")
 
 @enduml

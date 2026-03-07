@@ -5,19 +5,19 @@ title Rental Service - Componentes
 
 Container_Boundary(rental_service, "Rental Service") {
 
-Component(rental_api, "Rental API", "REST Controller", "Recebe requisições")
+    Component(rental_api, "Rental API", "REST Controller", "Recebe requisições")
 
-Component(rental_application, "Rental Application Service", "Application Layer", "Orquestra regras de negócio")
+    Component(rental_application, "Rental Application Service", "Application Layer", "Orquestra regras de negócio")
 
-Component(reservation_engine, "Reservation Engine", "Domain Service", "Gerencia disponibilidade")
+    Component(reservation_engine, "Reservation Engine", "Domain Service", "Gerencia disponibilidade")
 
-Component(pricing_service, "Pricing Service", "Domain Service", "Calcula preços")
+    Component(pricing_service, "Pricing Service", "Domain Service", "Calcula preços")
 
-Component(contract_service, "Contract Service", "Domain Service", "Gera contratos")
+    Component(contract_service, "Contract Service", "Domain Service", "Gera contratos")
 
-Component(rental_repository, "Rental Repository", "Repository", "Persistência")
+    Component(rental_repository, "Rental Repository", "Repository", "Persistência")
 
-Component(event_publisher, "Event Publisher", "Messaging", "Publica eventos")
+    Component(event_publisher, "Event Publisher", "Messaging", "Publica eventos")
 
 }
 
@@ -38,4 +38,34 @@ Rel(rental_repository, rental_db, "R/W")
 Rel(rental_application, event_publisher, "Publica eventos")
 Rel(event_publisher, message_broker, "Envia evento")
 
+
+
+'' Veiculos
+
+title Vehicle Service - Componentes
+
+Container_Boundary(vehicle_service, "Vehicle Service") {
+
+    Component(vehicle_api, "Vehicle API", "REST Controller", "Recebe requisições")
+
+    Component(vehicle_security_service, "Vehicle Security Service", "Application Layer", "Orquestra regras de negócio")
+    
+    Component(vehicle_application, "Vehicle Application Service", "Application Layer", "Orquestra regras de negócio")
+
+    Component(vehicle_repository, "Vehicle Repository", "Repository", "Persistência")
+
+    Component(vehicle_event_publisher, "Event Publisher", "Messaging", "Publica eventos")
+
+}
+
+ContainerDb(vehicle_db, "Vehicle DB", "PostgreSQL")
+
+Container(message_broker, "Message Broker", "Kafka")
+
+Rel(vehicle_api, vehicle_security_service, "Autentica usuário")
+Rel(vehicle_api, vehicle_application, "Regras de negocio")
+Rel(vehicle_application, vehicle_repository, "Persistência")
+Rel(vehicle_application, vehicle_event_publisher, "Publica eventos e mensagens")
+
+Rel(vehicle_repository, vehicle_db, "R/W")
 @enduml
