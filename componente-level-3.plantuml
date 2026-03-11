@@ -68,4 +68,34 @@ Rel(vehicle_application, vehicle_repository, "Persistência")
 Rel(vehicle_application, vehicle_event_publisher, "Publica eventos e mensagens")
 
 Rel(vehicle_repository, vehicle_db, "R/W")
+
+
+'' Payment
+
+title Payment Service - Componentes
+
+Container_Boundary(payment_service, "Payment Service") {
+
+    Component(payment_api, "Payment API", "REST Controller", "Recebe requisições")
+
+    Component(payment_security_service, "Payment Security Service", "Application Layer", "Orquestra regras de negócio")
+    
+    Component(payment_application, "Payment Application Service", "Application Layer", "Orquestra regras de negócio")
+
+    Component(payment_repository, "Payment Repository", "Repository", "Persistência")
+
+    Component(payment_event_publisher, "Event Publisher", "Messaging", "Publica eventos")
+
+}
+
+ContainerDb(payment_db, "Payment DB", "PostgreSQL")
+
+Container(message_broker, "Message Broker", "Kafka")
+
+Rel(payment_api, payment_security_service, "Autentica usuário")
+Rel(payment_api, payment_application, "Regras de negocio")
+Rel(payment_application, payment_repository, "Persistência")
+Rel(payment_application, payment_event_publisher, "Publica eventos e mensagens")
+
+Rel(payment_repository, payment_db, "R/W")
 @enduml

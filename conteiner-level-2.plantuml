@@ -37,13 +37,14 @@ Rel(web_app, api_gateway, "HTTPS")
 Rel(api_gateway, user_service, "User API")
 Rel(api_gateway, vehicle_service, "Vehicle API")
 Rel(api_gateway, rental_service, "Rental API")
-Rel(api_gateway, payment_service, "Payment API")
 
 Rel(user_service, user_db, "R/W")
 Rel(vehicle_service, vehicle_db, "R/W")
 Rel(rental_service, rental_db, "R/W")
 
-Rel(rental_service, message_broker, "Publica eventos")
-Rel(notification_service, message_broker, "Consome eventos")
+Rel(user_service, message_broker, "Publica eventos de notificação")
+BiRel(rental_service, message_broker, "Publica eventos")
+BiRel(payment_service, message_broker, "Publica eventos")
+Rel( message_broker, notification_service, "Consome eventos")
 
 @enduml
