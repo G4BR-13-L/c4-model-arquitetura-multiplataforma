@@ -1,0 +1,6 @@
+@Locacao.UserServiceApp_HostAddress = http://localhost:5008
+
+GET {{Locacao.UserServiceApp_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
