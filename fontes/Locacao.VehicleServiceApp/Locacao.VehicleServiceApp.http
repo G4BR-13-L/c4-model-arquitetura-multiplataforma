@@ -1,0 +1,6 @@
+@Locacao.VehicleServiceApp_HostAddress = http://localhost:5086
+
+GET {{Locacao.VehicleServiceApp_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
