@@ -6,11 +6,11 @@
 '' =====================
 title Message Broker - Tópicos
 
-Container_Boundary(message_broker, "Message Broker (Kafka)") {
-    Component(topic_user, "user.events", "Kafka Topic", "Eventos de usuário: user.created, user.updated")
-    Component(topic_vehicle, "vehicle.events", "Kafka Topic", "Eventos de veículo: vehicle.created, vehicle.availability.updated")
-    Component(topic_rental, "rental.events", "Kafka Topic", "Eventos de locação: rental.created, rental.cancelled, rental.completed")
-    Component(topic_payment, "payment.events", "Kafka Topic", "Eventos de pagamento: payment.confirmed, payment.failed, payment.refunded")
+Container_Boundary(message_broker, "Message Broker (SQS/SNS)") {
+    Component(topic_user, "user.events", "SQS/SNS Topic", "Eventos de usuário: user.created, user.updated")
+    Component(topic_vehicle, "vehicle.events", "SQS/SNS Topic", "Eventos de veículo: vehicle.created, vehicle.availability.updated")
+    Component(topic_rental, "rental.events", "SQS/SNS Topic", "Eventos de locação: rental.created, rental.cancelled, rental.completed")
+    Component(topic_payment, "payment.events", "SQS/SNS Topic", "Eventos de pagamento: payment.confirmed, payment.failed, payment.refunded")
 }
 
 '' =====================

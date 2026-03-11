@@ -25,8 +25,9 @@ System_Boundary(system, "Plataforma de Locação") {
     ContainerDb(user_db, "User DB", "PostgreSQL")
     ContainerDb(vehicle_db, "Vehicle DB", "PostgreSQL")
     ContainerDb(rental_db, "Rental DB", "PostgreSQL")
+    ContainerDb(payment_db, "Rental DB", "PostgreSQL")
     
-    Container(message_broker, "Message Broker", "Kafka / RabbitMQ")
+    Container(message_broker, "Message Broker", "SQS/SNS / RabbitMQ")
 }
 
 Rel(customer, web_app, "Usa")
@@ -41,6 +42,7 @@ Rel(api_gateway, rental_service, "Rental API")
 Rel(user_service, user_db, "R/W")
 Rel(vehicle_service, vehicle_db, "R/W")
 Rel(rental_service, rental_db, "R/W")
+Rel(payment_service, payment_db, "R/W")
 
 Rel(user_service, message_broker, "Publica eventos de notificação")
 BiRel(rental_service, message_broker, "Publica eventos")
