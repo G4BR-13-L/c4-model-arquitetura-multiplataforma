@@ -1,101 +1,146 @@
 @startuml
 !include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
 
-title Rental Service - Componentes
+'' =====================
+'' Message Broker
+'' =====================
+title Message Broker - Tópicos
 
-Container_Boundary(rental_service, "Rental Service") {
-
-    Component(rental_api, "Rental API", "REST Controller", "Recebe requisições")
-
-    Component(rental_application, "Rental Application Service", "Application Layer", "Orquestra regras de negócio")
-
-    Component(reservation_engine, "Reservation Engine", "Domain Service", "Gerencia disponibilidade")
-
-    Component(pricing_service, "Pricing Service", "Domain Service", "Calcula preços")
-
-    Component(contract_service, "Contract Service", "Domain Service", "Gera contratos")
-
-    Component(rental_repository, "Rental Repository", "Repository", "Persistência")
-
-    Component(event_publisher, "Event Publisher", "Messaging", "Publica eventos")
-
+Container_Boundary(message_broker, "Message Broker (Kafka)") {
+    Component(topic_user, "user.events", "Kafka Topic", "Eventos de usuário: user.created, user.updated")
+    Component(topic_vehicle, "vehicle.events", "Kafka Topic", "Eventos de veículo: vehicle.created, vehicle.availability.updated")
+    Component(topic_rental, "rental.events", "Kafka Topic", "Eventos de locação: rental.created, rental.cancelled, rental.completed")
+    Component(topic_payment, "payment.events", "Kafka Topic", "Eventos de pagamento: payment.confirmed, payment.failed, payment.refunded")
 }
 
-ContainerDb(rental_db, "Rental DB", "PostgreSQL")
+'' =====================
+'' User Service
+'' =====================
+title User Service - Componentes
 
-Container(message_broker, "Message Broker", "Kafka")
+Container_Boundary(user_service, "User Service") {
+    Component(user_api, "User API", "REST Controller", "Recebe requisições")
+    Component(user_security_service, "User Security Service", "Application Layer", "Autentica e autoriza")
+    Component(user_application, "User Application Service", "Application Layer", "Orquestra regras de negócio")
+    Component(user_repository, "User Repository", "Repository", "Persistência")
+    Component(user_event_publisher, "Event Publisher", "Messaging", "Publica em user.events")
+}
 
-Rel(rental_api, rental_application, "Usa")
+ContainerDb(user_db, "User DB", "PostgreSQL")
 
-Rel(rental_application, reservation_engine, "Consulta disponibilidade")
-Rel(rental_application, pricing_service, "Calcula preço")
-Rel(rental_application, contract_service, "Cria contrato")
+Rel(user_api, user_security_service, "Autentica usuário")
+Rel(user_api, user_application, "Regras de negócio")
+Rel(user_application, user_repository, "Persistência")
+Rel(user_application, user_event_publisher, "Publica eventos")
+Rel(user_repository, user_db, "R/W")
+Rel(user_event_publisher, message_broker, "user.events")
 
-Rel(rental_application, rental_repository, "Salva reserva")
-
-Rel(rental_repository, rental_db, "R/W")
-
-Rel(rental_application, event_publisher, "Publica eventos")
-Rel(event_publisher, message_broker, "Envia evento")
-
-
-
-'' Veiculos
-
+'' =====================
+'' Vehicle Service
+'' =====================
 title Vehicle Service - Componentes
 
 Container_Boundary(vehicle_service, "Vehicle Service") {
-
     Component(vehicle_api, "Vehicle API", "REST Controller", "Recebe requisições")
-
-    Component(vehicle_security_service, "Vehicle Security Service", "Application Layer", "Orquestra regras de negócio")
-    
+    Component(vehicle_security_service, "Vehicle Security Service", "Application Layer", "Autentica e autoriza")
     Component(vehicle_application, "Vehicle Application Service", "Application Layer", "Orquestra regras de negócio")
-
     Component(vehicle_repository, "Vehicle Repository", "Repository", "Persistência")
-
-    Component(vehicle_event_publisher, "Event Publisher", "Messaging", "Publica eventos")
-
+    Component(vehicle_event_publisher, "Event Publisher", "Messaging", "Publica em vehicle.events")
 }
 
 ContainerDb(vehicle_db, "Vehicle DB", "PostgreSQL")
 
-Container(message_broker, "Message Broker", "Kafka")
-
 Rel(vehicle_api, vehicle_security_service, "Autentica usuário")
-Rel(vehicle_api, vehicle_application, "Regras de negocio")
+Rel(vehicle_api, vehicle_application, "Regras de negócio")
 Rel(vehicle_application, vehicle_repository, "Persistência")
-Rel(vehicle_application, vehicle_event_publisher, "Publica eventos e mensagens")
-
+Rel(vehicle_application, vehicle_event_publisher, "Publica eventos")
 Rel(vehicle_repository, vehicle_db, "R/W")
+Rel(vehicle_event_publisher, message_broker, "vehicle.events")
 
+'' =====================
+'' Rental Service
+'' =====================
+title Rental Service - Componentes
 
-'' Payment
+Container_Boundary(rental_service, "Rental Service") {
+    Component(rental_api, "Rental API", "REST Controller", "Recebe requisições")
+    Component(rental_security_service, "Rental Security Service", "Application Layer", "Autentica e autoriza")
+    Component(rental_application, "Rental Application Service", "Application Layer", "Orquestra regras de negócio")
+    Component(reservation_engine, "Reservation Engine", "Domain Service", "Gerencia disponibilidade")
+    Component(pricing_service, "Pricing Service", "Domain Service", "Calcula preços")
+    Component(contract_service, "Contract Service", "Domain Service", "Gera contratos")
+    Component(rental_repository, "Rental Repository", "Repository", "Persistência")
+    Component(rental_event_publisher, "Event Publisher", "Messaging", "Publica em rental.events")
+    Component(rental_event_consumer, "Event Consumer", "Messaging", "Consome payment.events")
+}
 
+ContainerDb(rental_db, "Rental DB", "PostgreSQL")
+
+Rel(rental_api, rental_security_service, "Autentica usuário")
+Rel(rental_api, rental_application, "Regras de negócio")
+Rel(rental_application, reservation_engine, "Consulta disponibilidade")
+Rel(rental_application, pricing_service, "Calcula preço")
+Rel(rental_application, contract_service, "Cria contrato")
+Rel(rental_application, rental_repository, "Salva reserva")
+Rel(rental_repository, rental_db, "R/W")
+Rel(rental_application, rental_event_publisher, "Publica eventos")
+Rel(rental_event_publisher, message_broker, "rental.events")
+Rel(message_broker, rental_event_consumer, "payment.events")
+Rel(rental_event_consumer, rental_application, "Atualiza status da locação")
+
+'' =====================
+'' Payment Service
+'' =====================
 title Payment Service - Componentes
 
 Container_Boundary(payment_service, "Payment Service") {
-
     Component(payment_api, "Payment API", "REST Controller", "Recebe requisições")
-
-    Component(payment_security_service, "Payment Security Service", "Application Layer", "Orquestra regras de negócio")
-    
+    Component(payment_security_service, "Payment Security Service", "Application Layer", "Autentica e autoriza")
     Component(payment_application, "Payment Application Service", "Application Layer", "Orquestra regras de negócio")
-
+    Component(payment_gateway_adapter, "Payment Gateway Adapter", "Infrastructure", "Integra com gateway externo")
     Component(payment_repository, "Payment Repository", "Repository", "Persistência")
-
-    Component(payment_event_publisher, "Event Publisher", "Messaging", "Publica eventos")
-
+    Component(payment_event_publisher, "Event Publisher", "Messaging", "Publica em payment.events")
+    Component(payment_event_consumer, "Event Consumer", "Messaging", "Consome rental.events")
 }
 
 ContainerDb(payment_db, "Payment DB", "PostgreSQL")
-
-Container(message_broker, "Message Broker", "Kafka")
+System_Ext(payment_gateway, "Payment Gateway", "Ex: Stripe / PagSeguro")
 
 Rel(payment_api, payment_security_service, "Autentica usuário")
-Rel(payment_api, payment_application, "Regras de negocio")
+Rel(payment_api, payment_application, "Regras de negócio")
+Rel(payment_application, payment_gateway_adapter, "Processa pagamento")
+Rel(payment_gateway_adapter, payment_gateway, "HTTPS")
 Rel(payment_application, payment_repository, "Persistência")
-Rel(payment_application, payment_event_publisher, "Publica eventos e mensagens")
-
+Rel(payment_application, payment_event_publisher, "Publica eventos")
+Rel(payment_event_publisher, message_broker, "payment.events")
+Rel(message_broker, payment_event_consumer, "rental.events")
+Rel(payment_event_consumer, payment_application, "Inicia cobrança")
 Rel(payment_repository, payment_db, "R/W")
+
+'' =====================
+'' Notification Service
+'' =====================
+title Notification Service - Componentes
+
+Container_Boundary(notification_service, "Notification Service") {
+    Component(event_consumer, "Event Consumer", "Messaging", "Consome todos os tópicos relevantes")
+    Component(notification_application, "Notification Application Service", "Application Layer", "Orquestra envio de notificações")
+    Component(email_adapter, "Email Adapter", "Infrastructure", "Envia emails")
+    Component(sms_adapter, "SMS Adapter", "Infrastructure", "Envia SMS")
+    Component(notification_repository, "Notification Repository", "Repository", "Registra notificações enviadas")
+}
+
+ContainerDb(notification_db, "Notification DB", "PostgreSQL")
+System_Ext(email_provider, "Email Provider", "Ex: SendGrid / SES")
+System_Ext(sms_provider, "SMS Provider", "Ex: Twilio / SNS")
+
+Rel(message_broker, event_consumer, "user.events\nrental.events\npayment.events")
+Rel(event_consumer, notification_application, "Dispara notificação")
+Rel(notification_application, email_adapter, "Envia email")
+Rel(notification_application, sms_adapter, "Envia SMS")
+Rel(email_adapter, email_provider, "HTTPS")
+Rel(sms_adapter, sms_provider, "HTTPS")
+Rel(notification_application, notification_repository, "Registra envio")
+Rel(notification_repository, notification_db, "R/W")
+
 @enduml
