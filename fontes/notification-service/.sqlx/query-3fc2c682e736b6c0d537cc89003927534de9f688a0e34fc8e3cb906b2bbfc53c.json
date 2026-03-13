@@ -1,0 +1,38 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT * FROM t_erro_mensagem_email ORDER BY inserted_at DESC",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "raw_content",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "error_message",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "inserted_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "3fc2c682e736b6c0d537cc89003927534de9f688a0e34fc8e3cb906b2bbfc53c"
+}
