@@ -1,0 +1,83 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO t_email (\n                sender_name, sender_email, recipient_email, recipient_name,\n                subject, content, original_json, status\n            )\n            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)\n            RETURNING\n                id,\n                sender_name as \"sender_name: NameField\",\n                sender_email as \"sender_email: EmailField\",\n                recipient_email as \"recipient_email: EmailField\",\n                recipient_name as \"recipient_name: NameField\",\n                subject, content, original_json, status, inserted_at\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "sender_name: NameField",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 2,
+        "name": "sender_email: EmailField",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 3,
+        "name": "recipient_email: EmailField",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 4,
+        "name": "recipient_name: NameField",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 5,
+        "name": "subject",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 6,
+        "name": "content",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "original_json",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 8,
+        "name": "status",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 9,
+        "name": "inserted_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Text",
+        "Text",
+        "Varchar"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "b1590a76995cdf50188342ed4d9b9f01251a2346432ec064b2e4a090cd6a7111"
+}
