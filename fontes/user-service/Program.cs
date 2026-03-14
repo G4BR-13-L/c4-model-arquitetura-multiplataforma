@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using UserService.API.Infra;
+using UserService.API.Infra.Persistence;
 using UserService.API.Infra.Repositories;
 using UserService.API.Models.KeyCloak;
 using UserService.API.Services;
@@ -20,6 +22,12 @@ namespace UserService.API
                 .ValidateOnStart();
 
             builder.Services.AddTransient<KeyCloakAdminAuthDelegatingHandler>();
+
+            var connectionString = builder.Configuration.GetConnectionString("UserServiceDb")
+                ?? throw new InvalidOperationException("Connection string 'UserServiceDb' was not found.");
+
+            builder.Services.AddDbContext<UserDbContext>(options =>
+                options.UseNpgsql(connectionString));
 
             builder.Services.AddHttpClient("KeyCloakAdmin", (sp, client) =>
             {
@@ -62,6 +70,12 @@ namespace UserService.API
                 });
 
             var app = builder.Build();
+
+            using (var scope = app.Services.CreateScope())
+            {
+                var dbContext = scope.ServiceProvider.GetRequiredService<UserDbContext>();
+                dbContext.Database.Migrate();
+            }
 
             app.UseSwagger();
             app.UseSwaggerUI();

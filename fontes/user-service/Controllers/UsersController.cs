@@ -18,7 +18,7 @@ namespace UserService.API.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = "service-admin")]
+        [Authorize]
         public async Task<IActionResult> CreateUserAsync([FromBody]CreateUserCommand request)
         {
             var result = await _userService.CreateUserAsync(request);
