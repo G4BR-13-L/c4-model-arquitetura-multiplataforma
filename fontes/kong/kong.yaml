@@ -1,0 +1,52 @@
+_format_version: "3.0"
+_transform: true
+
+services:
+  - name: user-service
+    url: http://user-service-api:8080
+    routes:
+      - name: user-auth-route
+        paths:
+          - /v1/auth
+        strip_path: false
+      - name: user-route
+        paths:
+          - /v1/user
+        strip_path: false
+
+  - name: vehicle-service
+    url: http://vehicle-service-api:8080
+    routes:
+      - name: vehicle-route
+        paths:
+          - /v1/vehicle
+        strip_path: false
+
+  - name: notification-service
+    url: http://notification-service-api:8080
+    routes:
+      - name: notification-route
+        paths:
+          - /v1/notification
+        strip_path: false
+
+plugins:
+  - name: rate-limiting
+    config:
+      minute: 100
+      policy: local
+
+  - name: cors
+    config:
+      origins:
+        - "http://localhost:3000"
+      methods:
+        - GET
+        - POST
+        - PUT
+        - DELETE
+        - OPTIONS
+      headers:
+        - Authorization
+        - Content-Type
+      credentials: true
