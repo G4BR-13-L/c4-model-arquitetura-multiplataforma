@@ -1,7 +1,11 @@
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using UserService.API.Infra;
+using UserService.API.Infra.Persistence;
 using UserService.API.Infra.Repositories;
 using UserService.API.Models.KeyCloak;
+using UserService.API.Services;
 
 namespace UserService.API
 {
@@ -18,6 +22,12 @@ namespace UserService.API
                 .ValidateOnStart();
 
             builder.Services.AddTransient<KeyCloakAdminAuthDelegatingHandler>();
+
+            var connectionString = builder.Configuration.GetConnectionString("UserServiceDb")
+                ?? throw new InvalidOperationException("Connection string 'UserServiceDb' was not found.");
+
+            builder.Services.AddDbContext<UserDbContext>(options =>
+                options.UseNpgsql(connectionString));
 
             builder.Services.AddHttpClient("KeyCloakAdmin", (sp, client) =>
             {
@@ -38,28 +48,39 @@ namespace UserService.API
 
             builder.Services.AddScoped<IKeyCloakAuthRepository, KeyCloakAuthRepository>();  
             builder.Services.AddScoped<IKeyCloakManagementRepository, KeyCloakManagementRepository>();
+            builder.Services.AddScoped<IKeyCloakService, KeyCloakService>();
+            builder.Services.AddScoped<IUserService, UserService.API.Services.UserService>();
 
+            builder.Services.AddAuthorization();
             builder.Services.AddControllers();
-            // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-            //builder.Services.AddOpenApi();
-
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
 
+            var keycloakSettings = builder.Configuration
+                .GetSection(nameof(KeyCloakSettings))
+                .Get<KeyCloakSettings>();
+
+            builder.Services
+                .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+                .AddJwtBearer(options =>
+                {
+                    options.Authority = $"{keycloakSettings.BaseUrl}/realms/{keycloakSettings.Realm}";
+                    options.Audience = "account";
+                    options.RequireHttpsMetadata = false;
+                });
+
             var app = builder.Build();
 
-            // Configure the HTTP request pipeline.
-            if (app.Environment.IsDevelopment())
+            using (var scope = app.Services.CreateScope())
             {
-                //app.MapOpenApi();
-                app.UseSwagger();
-                app.UseSwaggerUI();
+                var dbContext = scope.ServiceProvider.GetRequiredService<UserDbContext>();
+                dbContext.Database.Migrate();
             }
 
-            
+            app.UseSwagger();
+            app.UseSwaggerUI();
 
-            app.UseHttpsRedirection();
-
+            app.UseAuthentication();
             app.UseAuthorization();
 
             app.MapControllers();

@@ -1,4 +1,5 @@
-﻿namespace UserService.API.Models.Commands
+﻿using UserService.API.Models.KeyCloak;
+namespace UserService.API.Models.Commands
 {
     public sealed class CreateUserCommand
     {
@@ -7,6 +8,7 @@
         public string LastName { get; set; }
         public string Email { get; set; }
         public string Password { get; set; }
+        public List<string> Roles { get; set; }
 
         public User ToModel()
         {

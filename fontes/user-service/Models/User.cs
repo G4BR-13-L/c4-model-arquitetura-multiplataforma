@@ -4,15 +4,17 @@
     {
         public User()
         {
-            CreatedAt = DateTimeOffset.Now;
+            Id = Guid.NewGuid();
+            CreatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified);
         }
 
-        public string UserName { get; init; }
-        public string FirstName { get; init; }
-        public string LastName { get; init; }
-        public string Email { get; init; }
+        public Guid Id { get; set; }
+        public string UserName { get; set; }
+        public string FirstName { get; set; }
+        public string LastName { get; set; }
+        public string Email { get; set; }
         public string IdpId { get; private set; }
-        public DateTimeOffset CreatedAt { get; }
+        public DateTime CreatedAt { get; set; }
 
         public void SetIdpId(string idpId)
         {
