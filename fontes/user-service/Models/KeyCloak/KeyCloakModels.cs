@@ -1,4 +1,4 @@
-﻿using System.Text.Json.Serialization;
+using System.Text.Json.Serialization;
 
 namespace UserService.API.Models.KeyCloak
 {
@@ -20,13 +20,22 @@ namespace UserService.API.Models.KeyCloak
                 lastName = user.LastName,
                 email = user.Email
             };
-        }            
+        }
     }
+
+    public sealed class UpdateUserKeyCloakRequest
+    {
+        public string firstName { get; set; }
+        public string lastName { get; set; }
+        public string email { get; set; }
+    }
+
     public sealed record ChangePasswordKeyCloakRequest(string Value)
     {
         public string Type = "password";
         public bool Temporary = false;
     }
+
     public sealed class GetUserKeyCloakResponse
     {
         [JsonPropertyName("id")]

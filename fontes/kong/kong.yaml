@@ -22,13 +22,29 @@ services:
           - /v1/vehicle
         strip_path: false
 
+  - name: rental-service
+    url: http://rental-service-api:8080
+    routes:
+      - name: rental-route
+        paths:
+          - /v1/rental
+        strip_path: false
+
+  - name: payment-service
+    url: http://payment-service-api:8080
+    routes:
+      - name: payment-route
+        paths:
+          - /v1/payment
+        strip_path: false
+
   - name: notification-service
     url: http://notification-service-api:8080
     routes:
       - name: notification-route
         paths:
           - /v1/notification
-        strip_path: false
+        strip_path: true
 
 plugins:
   - name: rate-limiting
@@ -50,3 +66,4 @@ plugins:
         - Authorization
         - Content-Type
       credentials: true
+      preflight_continue: false

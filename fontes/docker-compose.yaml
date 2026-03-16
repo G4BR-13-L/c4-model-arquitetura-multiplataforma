@@ -15,6 +15,8 @@ services:
       - locacao-net
 
   # ── Keycloak ──────────────────────────────────────────────────────
+  # SEM healthcheck — a imagem ubi9-minimal não tem curl nem wget.
+  # O user-service usa restart: on-failure e vai reconectar sozinho.
   keycloak:
     build:
       context: ./keycloak
@@ -33,12 +35,6 @@ services:
     command: ["start-dev", "--import-realm"]
     networks:
       - locacao-net
-    healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:8080/realms/master || exit 1"]
-      interval: 15s
-      timeout: 10s
-      retries: 10
-      start_period: 60s
 
   # ── User Service DB ───────────────────────────────────────────────
   user-service-db:
@@ -53,6 +49,8 @@ services:
       - locacao-net
 
   # ── User Service ──────────────────────────────────────────────────
+  # restart: on-failure garante que ele tente de novo enquanto o
+  # Keycloak ainda estiver inicializando (demora ~60-90s)
   user-service-api:
     build:
       context: ./user-service
@@ -61,10 +59,15 @@ services:
     ports:
       - "7001:8080"
     environment:
-      ASPNETCORE_ENVIRONMENT: Staging
+      ASPNETCORE_ENVIRONMENT: Development
+      KeyCloakSettings__BaseUrl: http://keycloak:8080
+      KeyCloakSettings__Realm: master
+      KeyCloakSettings__ClientId: user-service-api
+      KeyCloakSettings__ClientSecret: AeA2Tie5N7TXQHflE2AXvuAqoq1zTDFY
     depends_on:
       - user-service-db
       - keycloak
+    restart: on-failure
     networks:
       - locacao-net
 
@@ -78,6 +81,66 @@ services:
       - "7002:8080"
     environment:
       ASPNETCORE_ENVIRONMENT: Development
+    networks:
+      - locacao-net
+
+  # ── Rental Service ────────────────────────────────────────────────
+  rental-service-api:
+    build:
+      context: ./rental-service
+      dockerfile: Dockerfile
+    container_name: rental-service-api
+    ports:
+      - "7003:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+    networks:
+      - locacao-net
+
+  # ── Payment Service ───────────────────────────────────────────────
+  payment-service-api:
+    build:
+      context: ./payment-service
+      dockerfile: Dockerfile
+    container_name: payment-service-api
+    ports:
+      - "7004:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+    networks:
+      - locacao-net
+
+  # ── Notification Service DB ───────────────────────────────────────
+  notification-service-db:
+    image: postgres:15
+    container_name: notification-service-db
+    restart: always
+    environment:
+      POSTGRES_DB: notification_service
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    networks:
+      - locacao-net
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ── Notification Service ──────────────────────────────────────────
+  notification-service-api:
+    build:
+      context: ./notification-service
+      dockerfile: Dockerfile
+    container_name: notification-service-api
+    ports:
+      - "7005:8080"
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@notification-service-db:5432/notification_service
+      APP_ENVIRONMENT: dev
+    depends_on:
+      notification-service-db:
+        condition: service_healthy
     networks:
       - locacao-net
 

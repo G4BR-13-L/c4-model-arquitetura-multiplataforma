@@ -11,7 +11,6 @@ namespace UserService.API
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            // Add services to the container.
             builder.Services.AddOptions<KeyCloakSettings>()
                 .BindConfiguration(nameof(KeyCloakSettings))
                 .ValidateDataAnnotations()
@@ -22,48 +21,36 @@ namespace UserService.API
             builder.Services.AddHttpClient("KeyCloakAdmin", (sp, client) =>
             {
                 var settings = sp.GetRequiredService<IOptions<KeyCloakSettings>>().Value;
-
                 var baseUrl = settings.BaseUrl.TrimEnd('/');
                 client.BaseAddress = new Uri($"{baseUrl}/admin/realms/{settings.Realm}/");
-            })
-                .AddHttpMessageHandler<KeyCloakAdminAuthDelegatingHandler>();
+            }).AddHttpMessageHandler<KeyCloakAdminAuthDelegatingHandler>();
 
             builder.Services.AddHttpClient("KeyCloakAuth", (sp, client) =>
             {
                 var settings = sp.GetRequiredService<IOptions<KeyCloakSettings>>().Value;
-
                 var baseUrl = settings.BaseUrl.TrimEnd('/');
                 client.BaseAddress = new Uri($"{baseUrl}/realms/{settings.Realm}/");
             });
 
-            builder.Services.AddScoped<IKeyCloakAuthRepository, KeyCloakAuthRepository>();  
+            builder.Services.AddScoped<IKeyCloakAuthRepository, KeyCloakAuthRepository>();
             builder.Services.AddScoped<IKeyCloakManagementRepository, KeyCloakManagementRepository>();
 
             builder.Services.AddControllers();
-            // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-            //builder.Services.AddOpenApi();
-
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
 
             var app = builder.Build();
 
-            // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
             {
-                //app.MapOpenApi();
                 app.UseSwagger();
                 app.UseSwaggerUI();
             }
 
-            
-
-            app.UseHttpsRedirection();
+            // REMOVIDO: app.UseHttpsRedirection() — causa redirect loops em Docker
 
             app.UseAuthorization();
-
             app.MapControllers();
-
             app.Run();
         }
     }

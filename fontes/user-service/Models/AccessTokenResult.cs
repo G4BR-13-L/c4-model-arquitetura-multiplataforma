@@ -1,10 +1,16 @@
-﻿using System.Text.Json.Serialization;
+using System.Text.Json.Serialization;
 
-namespace UserService.API.Models
+public sealed class AccessTokenResult
 {
-    public sealed class AccessTokenResult
-    {
-        [JsonPropertyName("access_token")]
-        public string AccessToken { get; init; }
-    }
+    [JsonPropertyName("access_token")]
+    public string AccessToken { get; init; }
+
+    [JsonPropertyName("refresh_token")]
+    public string RefreshToken { get; init; }
+
+    [JsonPropertyName("expires_in")]
+    public int ExpiresIn { get; init; }
+
+    [JsonPropertyName("token_type")]
+    public string TokenType { get; init; }
 }
