@@ -5,7 +5,7 @@ using UserService.API.Models.Commands;
 
 namespace UserService.API.Controllers
 {
-    [Route("v1/[controller]")]
+    [Route("v1/auth")]
     [ApiController]
     public class AuthController : ControllerBase
     {

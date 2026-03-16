@@ -13,6 +13,8 @@ namespace UserService.API.Infra.Repositories
         Task<bool> UpdateUserAsync(string userId, UpdateUserKeyCloakRequest user);
         Task<bool> DeleteUserAsync(string userId);
         Task<bool> ResetPasswordAsync(string userId, string newPassword);
+        Task<RoleRepresentation> GetRoleAsync(string roleName);
+        Task<bool> AddRolesToUserAsync(string userId, List<RoleRepresentation> roles);
     }
 
     public sealed class KeyCloakManagementRepository : IKeyCloakManagementRepository
@@ -108,6 +110,36 @@ namespace UserService.API.Infra.Repositories
             var request = new HttpRequestMessage(HttpMethod.Put, $"users/{userId}/reset-password")
             {
                 Content = new StringContent(JsonSerializer.Serialize(body), Encoding.UTF8, "application/json")
+            };
+
+            var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+
+            return response.IsSuccessStatusCode;
+        }
+
+        public async Task<RoleRepresentation> GetRoleAsync(string roleName)
+        {
+            using var client = _httpClientFactory.CreateClient("KeyCloakAdmin");
+
+            var request = new HttpRequestMessage(HttpMethod.Get, $"roles/{roleName}");
+
+            var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+
+            if (!response.IsSuccessStatusCode)
+                return null;
+
+            var responseContent = await response.Content.ReadAsStringAsync();
+
+            return JsonSerializer.Deserialize<RoleRepresentation>(responseContent);
+        }
+
+        public async Task<bool> AddRolesToUserAsync(string userId, List<RoleRepresentation> roles)
+        {
+            using var client = _httpClientFactory.CreateClient("KeyCloakAdmin");
+
+            var request = new HttpRequestMessage(HttpMethod.Post, $"users/{userId}/role-mappings/realm")
+            {
+                Content = new StringContent(JsonSerializer.Serialize(roles), Encoding.UTF8, "application/json")
             };
 
             var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
