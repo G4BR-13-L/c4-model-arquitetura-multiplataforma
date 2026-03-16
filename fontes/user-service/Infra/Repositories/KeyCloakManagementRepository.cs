@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.AspNetCore.WebUtilities;
 using System.Text;
 using System.Text.Json;
 using UserService.API.Models.KeyCloak;
@@ -9,6 +9,9 @@ namespace UserService.API.Infra.Repositories
     {
         Task<bool> CreateUserAsync(CreateUserKeyCloakRequest user);
         Task<GetUserKeyCloakResponse> GetUserAsync(string username);
+        Task<GetUserKeyCloakResponse> GetUserByIdAsync(string userId);
+        Task<bool> UpdateUserAsync(string userId, UpdateUserKeyCloakRequest user);
+        Task<bool> DeleteUserAsync(string userId);
         Task<bool> ResetPasswordAsync(string userId, string newPassword);
         Task<RoleRepresentation> GetRoleAsync(string roleName);
         Task<bool> AddRolesToUserAsync(string userId, List<RoleRepresentation> roles);
@@ -36,24 +39,63 @@ namespace UserService.API.Infra.Repositories
                 return null;
 
             var responseContent = await response.Content.ReadAsStringAsync();
-            
             var list = JsonSerializer.Deserialize<List<GetUserKeyCloakResponse>>(responseContent);
-            
+
             return list.FirstOrDefault();
         }
+
+        public async Task<GetUserKeyCloakResponse> GetUserByIdAsync(string userId)
+        {
+            using var client = _httpClientFactory.CreateClient("KeyCloakAdmin");
+
+            var request = new HttpRequestMessage(HttpMethod.Get, $"users/{userId}");
+            var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+
+            if (!response.IsSuccessStatusCode)
+                return null;
+
+            var responseContent = await response.Content.ReadAsStringAsync();
+            return JsonSerializer.Deserialize<GetUserKeyCloakResponse>(responseContent);
+        }
+
         public async Task<bool> CreateUserAsync(CreateUserKeyCloakRequest user)
         {
             using var client = _httpClientFactory.CreateClient("KeyCloakAdmin");
 
-            var request = new HttpRequestMessage(HttpMethod.Post, $"users")
+            var request = new HttpRequestMessage(HttpMethod.Post, "users")
             {
                 Content = new StringContent(JsonSerializer.Serialize(user), Encoding.UTF8, "application/json")
             };
 
             var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
-            
+
             return response.IsSuccessStatusCode;
         }
+
+        public async Task<bool> UpdateUserAsync(string userId, UpdateUserKeyCloakRequest user)
+        {
+            using var client = _httpClientFactory.CreateClient("KeyCloakAdmin");
+
+            var request = new HttpRequestMessage(HttpMethod.Put, $"users/{userId}")
+            {
+                Content = new StringContent(JsonSerializer.Serialize(user), Encoding.UTF8, "application/json")
+            };
+
+            var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+
+            return response.IsSuccessStatusCode;
+        }
+
+        public async Task<bool> DeleteUserAsync(string userId)
+        {
+            using var client = _httpClientFactory.CreateClient("KeyCloakAdmin");
+
+            var request = new HttpRequestMessage(HttpMethod.Delete, $"users/{userId}");
+            var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+
+            return response.IsSuccessStatusCode;
+        }
+
         public async Task<bool> ResetPasswordAsync(string userId, string newPassword)
         {
             using var client = _httpClientFactory.CreateClient("KeyCloakAdmin");

@@ -1,0 +1,14 @@
+{
+  "ExpandedNodes": [
+    "",
+    "\\fontes",
+    "\\fontes\\payment-service",
+    "\\fontes\\payment-service\\Controllers",
+    "\\fontes\\user-service",
+    "\\fontes\\user-service\\Controllers",
+    "\\fontes\\user-service\\Infra",
+    "\\fontes\\user-service\\Infra\\Repositories"
+  ],
+  "SelectedNode": "\\fontes\\user-service\\Controllers\\UserController.cs",
+  "PreviewInSolutionExplorer": false
+}

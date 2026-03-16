@@ -1,6 +1,8 @@
 name: trab-arq-multiplataforma
+
 services:
 
+  # ── Keycloak DB ───────────────────────────────────────────────────
   keycloak-db:
     image: postgres:15
     container_name: keycloak-db
@@ -9,11 +11,16 @@ services:
       POSTGRES_DB: keycloak
       POSTGRES_USER: keycloak
       POSTGRES_PASSWORD: keycloak
+    networks:
+      - locacao-net
 
+  # ── Keycloak ──────────────────────────────────────────────────────
+  # SEM healthcheck — a imagem ubi9-minimal não tem curl nem wget.
+  # O user-service usa restart: on-failure e vai reconectar sozinho.
   keycloak:
-    build: 
-        context: ./keycloak
-        dockerfile: Dockerfile
+    build:
+      context: ./keycloak
+      dockerfile: DockerFile
     container_name: keycloak
     depends_on:
       - keycloak-db
@@ -25,26 +32,196 @@ services:
       KC_DB_URL_DATABASE: keycloak
       KC_DB_USERNAME: keycloak
       KC_DB_PASSWORD: keycloak
-
-      # KC_BOOTSTRAP_ADMIN_USERNAME: admin
-      # KC_BOOTSTRAP_ADMIN_PASSWORD: admin
     command: ["start-dev", "--import-realm"]
+    networks:
+      - locacao-net
 
+  # ── User Service DB ───────────────────────────────────────────────
   user-service-db:
-    image: postgres:latest
+    image: postgres:15
     container_name: user-service-db
     restart: always
     environment:
       POSTGRES_DB: user-service
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      
+      POSTGRES_USER: user-service
+      POSTGRES_PASSWORD: user-service
+    networks:
+      - locacao-net
+
+  # ── User Service ──────────────────────────────────────────────────
+  # restart: on-failure garante que ele tente de novo enquanto o
+  # Keycloak ainda estiver inicializando (demora ~60-90s)
   user-service-api:
-    build: 
-        context: ./user-service
-        dockerfile: Dockerfile
+    build:
+      context: ./user-service
+      dockerfile: Dockerfile
     container_name: user-service-api
     ports:
       - "7001:8080"
     environment:
-      ASPNETCORE_ENVIRONMENT: Staging
+      ASPNETCORE_ENVIRONMENT: Development
+      KeyCloakSettings__BaseUrl: http://keycloak:8080
+      KeyCloakSettings__Realm: master
+      KeyCloakSettings__ClientId: user-service-api
+      KeyCloakSettings__ClientSecret: AeA2Tie5N7TXQHflE2AXvuAqoq1zTDFY
+    depends_on:
+      - user-service-db
+      - keycloak
+    restart: on-failure
+    networks:
+      - locacao-net
+
+  # ── Vehicle Service ───────────────────────────────────────────────
+  vehicle-service-api:
+    build:
+      context: ./Locacao.VehicleServiceApp
+      dockerfile: Dockerfile
+    container_name: vehicle-service-api
+    ports:
+      - "7002:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+    networks:
+      - locacao-net
+
+  # ── Rental Service ────────────────────────────────────────────────
+  rental-service-api:
+    build:
+      context: ./rental-service
+      dockerfile: Dockerfile
+    container_name: rental-service-api
+    ports:
+      - "7003:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+    networks:
+      - locacao-net
+
+  # ── Payment Service ───────────────────────────────────────────────
+  payment-service-api:
+    build:
+      context: ./payment-service
+      dockerfile: Dockerfile
+    container_name: payment-service-api
+    ports:
+      - "7004:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+    networks:
+      - locacao-net
+
+  # ── Notification Service DB ───────────────────────────────────────
+  notification-service-db:
+    image: postgres:15
+    container_name: notification-service-db
+    restart: always
+    environment:
+      POSTGRES_DB: notification_service
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    networks:
+      - locacao-net
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ── Notification Service ──────────────────────────────────────────
+  notification-service-api:
+    build:
+      context: ./notification-service
+      dockerfile: Dockerfile
+    container_name: notification-service-api
+    ports:
+      - "7005:8080"
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@notification-service-db:5432/notification_service
+      APP_ENVIRONMENT: dev
+    depends_on:
+      notification-service-db:
+        condition: service_healthy
+    networks:
+      - locacao-net
+
+  # ── Kong Database ─────────────────────────────────────────────────
+  kong-database:
+    image: postgres:15-alpine
+    container_name: kong-database
+    environment:
+      POSTGRES_USER: kong
+      POSTGRES_DB: kong
+      POSTGRES_PASSWORD: kongpass
+    networks:
+      - locacao-net
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "kong"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ── Kong Migration ────────────────────────────────────────────────
+  kong-migration:
+    image: kong:3.6
+    container_name: kong-migration
+    command: kong migrations bootstrap
+    environment:
+      KONG_DATABASE: postgres
+      KONG_PG_HOST: kong-database
+      KONG_PG_USER: kong
+      KONG_PG_PASSWORD: kongpass
+      KONG_PG_DATABASE: kong
+    networks:
+      - locacao-net
+    depends_on:
+      kong-database:
+        condition: service_healthy
+    restart: on-failure
+
+  # ── Kong Gateway ──────────────────────────────────────────────────
+  kong:
+    image: kong:3.6
+    container_name: kong
+    environment:
+      KONG_DATABASE: postgres
+      KONG_PG_HOST: kong-database
+      KONG_PG_USER: kong
+      KONG_PG_PASSWORD: kongpass
+      KONG_PG_DATABASE: kong
+      KONG_PROXY_ACCESS_LOG: /dev/stdout
+      KONG_ADMIN_ACCESS_LOG: /dev/stdout
+      KONG_PROXY_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_LISTEN: "0.0.0.0:8001"
+      KONG_PROXY_LISTEN: "0.0.0.0:8000"
+    ports:
+      - "8000:8000"
+      - "8001:8001"
+    networks:
+      - locacao-net
+    depends_on:
+      kong-database:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "kong", "health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: on-failure
+
+  # ── Konga UI ──────────────────────────────────────────────────────
+  konga:
+    image: pantsel/konga:latest
+    container_name: konga
+    environment:
+      NODE_ENV: development
+    ports:
+      - "1337:1337"
+    networks:
+      - locacao-net
+    depends_on:
+      - kong
+
+networks:
+  locacao-net:
+    driver: bridge

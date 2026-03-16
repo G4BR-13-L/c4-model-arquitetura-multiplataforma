@@ -1,0 +1,558 @@
+{
+  "info": {
+    "name": "Plataforma de Locação — FINAL v3",
+    "description": "Collection definitiva. Rode 2.1 isolado primeiro se for primeira vez. Depois todos os 36 no Runner com Delay 300ms.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url",     "value": "http://localhost:8000" },
+    { "key": "admin_url",    "value": "http://localhost:8001" },
+    { "key": "access_token", "value": "" },
+    { "key": "user_id",      "value": "" },
+    { "key": "vehicle_id",   "value": "" },
+    { "key": "rental_id",    "value": "" },
+    { "key": "payment_id",   "value": "" }
+  ],
+  "item": [
+    {
+      "name": "1. Auth",
+      "item": [
+        {
+          "name": "1.1 Gerar Token JWT",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('Tem access_token', () => {",
+            "  const j = pm.response.json();",
+            "  pm.expect(j).to.have.property('access_token');",
+            "  pm.collectionVariables.set('access_token', j.access_token);",
+            "  console.log('Token salvo OK');",
+            "});",
+            "pm.test('Via Kong', () => pm.expect(pm.response.headers.get('Via')).to.include('kong'));",
+            "pm.test('Rate limit ativo', () => pm.expect(pm.response.headers.get('X-RateLimit-Limit-Minute')).to.eql('100'));",
+            "pm.test('CORS ativo', () => pm.expect(pm.response.headers.get('Access-Control-Allow-Credentials')).to.eql('true'));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"userName\": \"testuser\",\n  \"password\": \"Test@123\"\n}" },
+            "url": { "raw": "{{base_url}}/v1/auth/token", "host": ["{{base_url}}"], "path": ["v1","auth","token"] }
+          }
+        },
+        {
+          "name": "1.2 Credenciais Inválidas — 400",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 400', () => pm.response.to.have.status(400));",
+            "pm.test('Mensagem de erro', () => {",
+            "  const j = pm.response.json();",
+            "  // .NET serializa em camelCase: 'message' (minúsculo)",
+            "  const temMensagem = j.hasOwnProperty('message') || j.hasOwnProperty('Message');",
+            "  pm.expect(temMensagem).to.be.true;",
+            "});"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"userName\": \"usuario_invalido\",\n  \"password\": \"senha_errada\"\n}" },
+            "url": { "raw": "{{base_url}}/v1/auth/token", "host": ["{{base_url}}"], "path": ["v1","auth","token"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. User Service",
+      "item": [
+        {
+          "name": "2.1 Criar Usuário (idempotente)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "// Aceita 200 tanto para usuário novo quanto para usuário já existente",
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('Tem id e username', () => {",
+            "  const j = pm.response.json();",
+            "  pm.expect(j).to.have.property('id');",
+            "  pm.expect(j).to.have.property('username');",
+            "  pm.collectionVariables.set('user_id', j.id);",
+            "  console.log('user_id:', j.id);",
+            "});",
+            "pm.test('Via Kong', () => pm.expect(pm.response.headers.get('Via')).to.include('kong'));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"userName\": \"testuser\",\n  \"email\": \"test@locacao.com\",\n  \"password\": \"Test@123\",\n  \"firstName\": \"Test\",\n  \"lastName\": \"User\"\n}" },
+            "url": { "raw": "{{base_url}}/v1/user", "host": ["{{base_url}}"], "path": ["v1","user"] }
+          }
+        },
+        {
+          "name": "2.2 Buscar Usuário por ID",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('ID correto', () => pm.expect(pm.response.json().id).to.eql(pm.collectionVariables.get('user_id')));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": { "raw": "{{base_url}}/v1/user/{{user_id}}", "host": ["{{base_url}}"], "path": ["v1","user","{{user_id}}"] }
+          }
+        },
+        {
+          "name": "2.3 Atualizar Usuário",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "body": { "mode": "raw", "raw": "{\n  \"firstName\": \"Test Updated\",\n  \"lastName\": \"User Updated\",\n  \"email\": \"updated@locacao.com\"\n}" },
+            "url": { "raw": "{{base_url}}/v1/user/{{user_id}}", "host": ["{{base_url}}"], "path": ["v1","user","{{user_id}}"] }
+          }
+        },
+        {
+          "name": "2.4 Usuário não encontrado — 404",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 404', () => pm.response.to.have.status(404));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": { "raw": "{{base_url}}/v1/user/00000000-0000-0000-0000-000000000000", "host": ["{{base_url}}"], "path": ["v1","user","00000000-0000-0000-0000-000000000000"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Vehicle Service",
+      "item": [
+        {
+          "name": "3.1 Cadastrar Veículo",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 201', () => pm.response.to.have.status(201));",
+            "pm.test('Tem ID e placa', () => {",
+            "  const j = pm.response.json();",
+            "  pm.expect(j).to.have.property('id');",
+            "  pm.expect(j.placa).to.eql('ABC-1234');",
+            "  pm.expect(j.disponivel).to.be.true;",
+            "  pm.collectionVariables.set('vehicle_id', j.id);",
+            "  console.log('vehicle_id:', j.id);",
+            "});",
+            "pm.test('Via Kong', () => pm.expect(pm.response.headers.get('Via')).to.include('kong'));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "body": { "mode": "raw", "raw": "{\n  \"placa\": \"ABC-1234\",\n  \"modelo\": \"Toyota Corolla\",\n  \"ano\": 2023,\n  \"categoria\": \"Sedan\",\n  \"valorDiaria\": 150.00,\n  \"disponivel\": true\n}" },
+            "url": { "raw": "{{base_url}}/v1/vehicle", "host": ["{{base_url}}"], "path": ["v1","vehicle"] }
+          }
+        },
+        {
+          "name": "3.2 Listar Veículos",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('Retorna array', () => pm.expect(pm.response.json()).to.be.an('array'));",
+            "pm.test('Via Kong', () => pm.expect(pm.response.headers.get('Via')).to.include('kong'));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": { "raw": "{{base_url}}/v1/vehicle", "host": ["{{base_url}}"], "path": ["v1","vehicle"] }
+          }
+        },
+        {
+          "name": "3.3 Filtrar Disponíveis",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('Todos disponíveis', () => {",
+            "  const j = pm.response.json();",
+            "  pm.expect(j).to.be.an('array');",
+            "  j.forEach(v => pm.expect(v.disponivel).to.be.true);",
+            "});"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": { "raw": "{{base_url}}/v1/vehicle?disponivel=true", "host": ["{{base_url}}"], "path": ["v1","vehicle"], "query": [{"key":"disponivel","value":"true"}] }
+          }
+        },
+        {
+          "name": "3.4 Buscar por ID",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('ID correto', () => pm.expect(pm.response.json().id).to.eql(pm.collectionVariables.get('vehicle_id')));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": { "raw": "{{base_url}}/v1/vehicle/{{vehicle_id}}", "host": ["{{base_url}}"], "path": ["v1","vehicle","{{vehicle_id}}"] }
+          }
+        },
+        {
+          "name": "3.5 Atualizar Veículo",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('Valor atualizado', () => pm.expect(pm.response.json().valorDiaria).to.eql(175.00));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "body": { "mode": "raw", "raw": "{\n  \"valorDiaria\": 175.00\n}" },
+            "url": { "raw": "{{base_url}}/v1/vehicle/{{vehicle_id}}", "host": ["{{base_url}}"], "path": ["v1","vehicle","{{vehicle_id}}"] }
+          }
+        },
+        {
+          "name": "3.6 Veículo não encontrado — 404",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 404', () => pm.response.to.have.status(404));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": { "raw": "{{base_url}}/v1/vehicle/00000000-0000-0000-0000-000000000000", "host": ["{{base_url}}"], "path": ["v1","vehicle","00000000-0000-0000-0000-000000000000"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Rental Service",
+      "item": [
+        {
+          "name": "4.1 Criar Reserva",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 201', () => pm.response.to.have.status(201));",
+            "pm.test('Status Pendente (string) e valorTotal > 0', () => {",
+            "  const j = pm.response.json();",
+            "  pm.expect(j).to.have.property('id');",
+            "  pm.expect(j.status).to.eql('Pendente');",
+            "  pm.expect(j.valorTotal).to.be.greaterThan(0);",
+            "  pm.collectionVariables.set('rental_id', j.id);",
+            "  console.log('rental_id:', j.id, '| valorTotal:', j.valorTotal);",
+            "});",
+            "pm.test('Via Kong', () => pm.expect(pm.response.headers.get('Via')).to.include('kong'));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "body": { "mode": "raw", "raw": "{\n  \"usuarioId\": \"{{user_id}}\",\n  \"veiculoId\": \"{{vehicle_id}}\",\n  \"dataInicio\": \"2026-04-01\",\n  \"dataFim\": \"2026-04-05\",\n  \"valorDiaria\": 150.00\n}" },
+            "url": { "raw": "{{base_url}}/v1/rental", "host": ["{{base_url}}"], "path": ["v1","rental"] }
+          }
+        },
+        {
+          "name": "4.2 Buscar Reserva por ID",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('ID correto', () => pm.expect(pm.response.json().id).to.eql(pm.collectionVariables.get('rental_id')));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": { "raw": "{{base_url}}/v1/rental/{{rental_id}}", "host": ["{{base_url}}"], "path": ["v1","rental","{{rental_id}}"] }
+          }
+        },
+        {
+          "name": "4.3 Listar Reservas do Usuário",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('Array com pelo menos 1', () => {",
+            "  const j = pm.response.json();",
+            "  pm.expect(j).to.be.an('array');",
+            "  pm.expect(j.length).to.be.at.least(1);",
+            "});"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": { "raw": "{{base_url}}/v1/rental?usuarioId={{user_id}}", "host": ["{{base_url}}"], "path": ["v1","rental"], "query": [{"key":"usuarioId","value":"{{user_id}}"}] }
+          }
+        },
+        {
+          "name": "4.4 Concluir Locação",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('Status Concluido (string)', () => pm.expect(pm.response.json().status).to.eql('Concluido'));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": { "raw": "{{base_url}}/v1/rental/{{rental_id}}/concluir", "host": ["{{base_url}}"], "path": ["v1","rental","{{rental_id}}","concluir"] }
+          }
+        },
+        {
+          "name": "4.5 Cancelar Concluída — 400",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 400', () => pm.response.to.have.status(400));",
+            "pm.test('Mensagem de erro', () => {",
+            "  const j = pm.response.json();",
+            "  const temMsg = j.hasOwnProperty('Message') || j.hasOwnProperty('message');",
+            "  pm.expect(temMsg).to.be.true;",
+            "});"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": { "raw": "{{base_url}}/v1/rental/{{rental_id}}/cancelar", "host": ["{{base_url}}"], "path": ["v1","rental","{{rental_id}}","cancelar"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Payment Service",
+      "item": [
+        {
+          "name": "5.1 Processar Pagamento — Aprovado",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 201', () => pm.response.to.have.status(201));",
+            "pm.test('Status Confirmado (string) + TXN ID', () => {",
+            "  const j = pm.response.json();",
+            "  pm.expect(j).to.have.property('id');",
+            "  pm.expect(j.status).to.eql('Confirmado');",
+            "  pm.expect(j.gatewayTransactionId).to.include('FAKE-TXN');",
+            "  pm.collectionVariables.set('payment_id', j.id);",
+            "  console.log('payment_id:', j.id);",
+            "});",
+            "pm.test('Via Kong', () => pm.expect(pm.response.headers.get('Via')).to.include('kong'));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "body": { "mode": "raw", "raw": "{\n  \"locacaoId\": \"{{rental_id}}\",\n  \"valor\": 600.00,\n  \"metodoPagamento\": \"CartaoCredito\",\n  \"numeroCartao\": \"4111111111111111\",\n  \"validade\": \"12/28\",\n  \"cvv\": \"123\"\n}" },
+            "url": { "raw": "{{base_url}}/v1/payment", "host": ["{{base_url}}"], "path": ["v1","payment"] }
+          }
+        },
+        {
+          "name": "5.2 Pagamento Recusado — 422",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 422', () => pm.response.to.have.status(422));",
+            "pm.test('Status Falhou (string)', () => pm.expect(pm.response.json().payment.status).to.eql('Falhou'));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "body": { "mode": "raw", "raw": "{\n  \"locacaoId\": \"{{rental_id}}\",\n  \"valor\": 99999.99,\n  \"metodoPagamento\": \"CartaoCredito\"\n}" },
+            "url": { "raw": "{{base_url}}/v1/payment", "host": ["{{base_url}}"], "path": ["v1","payment"] }
+          }
+        },
+        {
+          "name": "5.3 Consultar Status",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('ID correto e tem status', () => {",
+            "  const j = pm.response.json();",
+            "  pm.expect(j.id).to.eql(pm.collectionVariables.get('payment_id'));",
+            "  pm.expect(j).to.have.property('status');",
+            "});"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": { "raw": "{{base_url}}/v1/payment/{{payment_id}}", "host": ["{{base_url}}"], "path": ["v1","payment","{{payment_id}}"] }
+          }
+        },
+        {
+          "name": "5.4 Solicitar Reembolso",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('Status Reembolsado (string)', () => pm.expect(pm.response.json().status).to.eql('Reembolsado'));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": { "raw": "{{base_url}}/v1/payment/{{payment_id}}/reembolso", "host": ["{{base_url}}"], "path": ["v1","payment","{{payment_id}}","reembolso"] }
+          }
+        },
+        {
+          "name": "5.5 Reembolso Duplo — 400",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 400', () => pm.response.to.have.status(400));",
+            "pm.test('Mensagem de erro', () => {",
+            "  const j = pm.response.json();",
+            "  pm.expect(j.hasOwnProperty('Message') || j.hasOwnProperty('message')).to.be.true;",
+            "});"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": { "raw": "{{base_url}}/v1/payment/{{payment_id}}/reembolso", "host": ["{{base_url}}"], "path": ["v1","payment","{{payment_id}}","reembolso"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Notification Service",
+      "item": [
+        {
+          "name": "6.1 Listar Últimos 5 Emails",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('Array com máx 5', () => { const j = pm.response.json(); pm.expect(j).to.be.an('array'); pm.expect(j.length).to.be.at.most(5); });",
+            "pm.test('Via Kong', () => pm.expect(pm.response.headers.get('Via')).to.include('kong'));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": { "raw": "{{base_url}}/v1/notification/email", "host": ["{{base_url}}"], "path": ["v1","notification","email"] }
+          }
+        },
+        {
+          "name": "6.2 UUID Inválido — 400",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 400', () => pm.response.to.have.status(400));",
+            "pm.test('error: invalid_uuid_format', () => pm.expect(pm.response.json().error).to.eql('invalid_uuid_format'));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": { "raw": "{{base_url}}/v1/notification/email/nao-e-um-uuid", "host": ["{{base_url}}"], "path": ["v1","notification","email","nao-e-um-uuid"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. Kong Admin",
+      "item": [
+        {
+          "name": "7.1 Status do Kong",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('DB acessível', () => pm.expect(pm.response.json().database.reachable).to.be.true);"
+          ], "type": "text/javascript" }}],
+          "request": { "method": "GET", "url": { "raw": "{{admin_url}}/status", "host": ["{{admin_url}}"], "path": ["status"] } }
+        },
+        {
+          "name": "7.2 Listar Services",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('5 services', () => pm.expect(pm.response.json().data.length).to.eql(5));",
+            "pm.test('Todos existem', () => { const n = pm.response.json().data.map(s => s.name); ['user-service','vehicle-service','rental-service','payment-service','notification-service'].forEach(x => pm.expect(n).to.include(x)); });"
+          ], "type": "text/javascript" }}],
+          "request": { "method": "GET", "url": { "raw": "{{admin_url}}/services", "host": ["{{admin_url}}"], "path": ["services"] } }
+        },
+        {
+          "name": "7.3 Listar Routes",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('6 routes', () => pm.expect(pm.response.json().data.length).to.eql(6));",
+            "pm.test('Todas com /v1', () => pm.response.json().data.forEach(r => pm.expect(r.paths[0]).to.include('/v1')));"
+          ], "type": "text/javascript" }}],
+          "request": { "method": "GET", "url": { "raw": "{{admin_url}}/routes", "host": ["{{admin_url}}"], "path": ["routes"] } }
+        },
+        {
+          "name": "7.4 Listar Plugins",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('rate-limiting e cors ativos', () => { const n = pm.response.json().data.map(p => p.name); pm.expect(n).to.include('rate-limiting'); pm.expect(n).to.include('cors'); });"
+          ], "type": "text/javascript" }}],
+          "request": { "method": "GET", "url": { "raw": "{{admin_url}}/plugins", "host": ["{{admin_url}}"], "path": ["plugins"] } }
+        },
+        {
+          "name": "7.5 Headers Kong na Resposta",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Via kong/3.6.1', () => pm.expect(pm.response.headers.get('Via')).to.eql('kong/3.6.1'));",
+            "pm.test('X-Kong-Proxy-Latency', () => pm.expect(pm.response.headers.get('X-Kong-Proxy-Latency')).to.exist);",
+            "pm.test('X-Kong-Upstream-Latency', () => pm.expect(pm.response.headers.get('X-Kong-Upstream-Latency')).to.exist);"
+          ], "type": "text/javascript" }}],
+          "request": { "method": "GET", "url": { "raw": "{{base_url}}/v1/vehicle", "host": ["{{base_url}}"], "path": ["v1","vehicle"] } }
+        }
+      ]
+    },
+    {
+      "name": "8. E2E — Fluxo Completo",
+      "item": [
+        {
+          "name": "E2E-1 Criar Usuário",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('[E2E-1] Usuário criado/retornado via Kong', () => {",
+            "  pm.response.to.have.status(200);",
+            "  pm.collectionVariables.set('user_id', pm.response.json().id);",
+            "});"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"userName\": \"e2euser\",\n  \"email\": \"e2e@locacao.com\",\n  \"password\": \"Test@123\",\n  \"firstName\": \"E2E\",\n  \"lastName\": \"User\"\n}" },
+            "url": { "raw": "{{base_url}}/v1/user", "host": ["{{base_url}}"], "path": ["v1","user"] }
+          }
+        },
+        {
+          "name": "E2E-2 Autenticar",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('[E2E-2] Token gerado', () => { pm.response.to.have.status(200); pm.collectionVariables.set('access_token', pm.response.json().access_token); });",
+            "pm.test('[E2E-2] Rate limit', () => pm.expect(pm.response.headers.get('X-RateLimit-Limit-Minute')).to.eql('100'));",
+            "pm.test('[E2E-2] CORS', () => pm.expect(pm.response.headers.get('Access-Control-Allow-Credentials')).to.eql('true'));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"userName\": \"e2euser\",\n  \"password\": \"Test@123\"\n}" },
+            "url": { "raw": "{{base_url}}/v1/auth/token", "host": ["{{base_url}}"], "path": ["v1","auth","token"] }
+          }
+        },
+        {
+          "name": "E2E-3 Cadastrar Veículo",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('[E2E-3] Veículo cadastrado', () => { pm.response.to.have.status(201); pm.collectionVariables.set('vehicle_id', pm.response.json().id); });"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "body": { "mode": "raw", "raw": "{\n  \"placa\": \"E2E-0001\",\n  \"modelo\": \"Honda Civic\",\n  \"ano\": 2024,\n  \"categoria\": \"Sedan\",\n  \"valorDiaria\": 200.00,\n  \"disponivel\": true\n}" },
+            "url": { "raw": "{{base_url}}/v1/vehicle", "host": ["{{base_url}}"], "path": ["v1","vehicle"] }
+          }
+        },
+        {
+          "name": "E2E-4 Criar Reserva",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('[E2E-4] Reserva Pendente e valorTotal=600', () => {",
+            "  pm.response.to.have.status(201);",
+            "  const j = pm.response.json();",
+            "  pm.expect(j.status).to.eql('Pendente');",
+            "  pm.expect(j.valorTotal).to.eql(600);",
+            "  pm.collectionVariables.set('rental_id', j.id);",
+            "});"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "body": { "mode": "raw", "raw": "{\n  \"usuarioId\": \"{{user_id}}\",\n  \"veiculoId\": \"{{vehicle_id}}\",\n  \"dataInicio\": \"2026-04-01\",\n  \"dataFim\": \"2026-04-04\",\n  \"valorDiaria\": 200.00\n}" },
+            "url": { "raw": "{{base_url}}/v1/rental", "host": ["{{base_url}}"], "path": ["v1","rental"] }
+          }
+        },
+        {
+          "name": "E2E-5 Processar Pagamento",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('[E2E-5] Pagamento Confirmado + TXN ID', () => {",
+            "  pm.response.to.have.status(201);",
+            "  const j = pm.response.json();",
+            "  pm.expect(j.status).to.eql('Confirmado');",
+            "  pm.expect(j.gatewayTransactionId).to.include('FAKE-TXN');",
+            "  pm.collectionVariables.set('payment_id', j.id);",
+            "});"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "body": { "mode": "raw", "raw": "{\n  \"locacaoId\": \"{{rental_id}}\",\n  \"valor\": 600.00,\n  \"metodoPagamento\": \"CartaoCredito\",\n  \"numeroCartao\": \"4111111111111111\",\n  \"validade\": \"12/28\",\n  \"cvv\": \"123\"\n}" },
+            "url": { "raw": "{{base_url}}/v1/payment", "host": ["{{base_url}}"], "path": ["v1","payment"] }
+          }
+        },
+        {
+          "name": "E2E-6 Concluir Locação",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('[E2E-6] Locação Concluido', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().status).to.eql('Concluido'); });"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": { "raw": "{{base_url}}/v1/rental/{{rental_id}}/concluir", "host": ["{{base_url}}"], "path": ["v1","rental","{{rental_id}}","concluir"] }
+          }
+        },
+        {
+          "name": "E2E-7 Kong Saudável",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('[E2E-7] Kong OK', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().database.reachable).to.be.true; });",
+            "console.log('=== E2E COMPLETO ===');",
+            "console.log('user_id:',    pm.collectionVariables.get('user_id'));",
+            "console.log('vehicle_id:', pm.collectionVariables.get('vehicle_id'));",
+            "console.log('rental_id:',  pm.collectionVariables.get('rental_id'));",
+            "console.log('payment_id:', pm.collectionVariables.get('payment_id'));"
+          ], "type": "text/javascript" }}],
+          "request": { "method": "GET", "url": { "raw": "{{admin_url}}/status", "host": ["{{admin_url}}"], "path": ["status"] } }
+        }
+      ]
+    }
+  ]
+}
