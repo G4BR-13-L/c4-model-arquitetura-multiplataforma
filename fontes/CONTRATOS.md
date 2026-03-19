@@ -1,9 +1,196 @@
 
 
-'' Diagrama nivel 3
-''Modifique o diagrama para que tenha um API gateway assim como no diagrama de nivel 2
-''
-''
+esse é o fluxo básico de interações de uma plataforma de locação de carros
+Melhore-o, padronizando e formatando as requisições e responses
+
+ids sempre devem ser UUID
+todos os bodies devem ser JSON
+tudo deve estar no padrão rest
+Algumas requisições possuem jwt no heade
+
+--- Fluxo a ser revisado e formatado
+# Usuario:
+## Criar usuario
+POST - /users
+{
+    firstname,
+    lastname
+    email
+    username
+    password
+    cpf
+}
+
+
+## Consultar usuario por id
+GET - /users/{id}
+{
+    id,
+    firstname,
+    lastname
+    email
+    username
+    cpf
+}
+
+## Listar usuarios
+GET - /users
+
+[{
+    id,
+    firstname,
+    lastname
+    email
+    username
+    cpf
+}]
+
+## Evento de usuario criado no SQS
+{
+    id,
+    firstname,
+    lastname
+    email
+    username
+    cpf
+}
+
+# Vehicle
+GET - /categories 
+{
+    id,
+    description,
+    name
+}
+
+GET - /vehicles
+GET - /vehicles/{id}
+{
+    id,
+    modelo,
+    placa,
+    ano,
+    cor,
+    category_id,
+    available: bool,
+    valor_diaria
+}
+
+GET - /categories/{id}/vehicles
+
+POST - /vehicles/{id}/reservation
+
+
+# Rental publicando evento de locação
+
+GET - /rental
+[
+    {
+        vehicle_id,
+        data_inicio,
+        data_fim,
+        reserva_id: String,
+        preco: bigint (dias * valor_veiculo)
+        status_pagamento: String,
+        status: String
+    }
+]
+
+GET - /rental/reserva/{id}
+
+{
+    vehicle_id,
+    data_inicio,
+    data_fim,
+    reserva_id: String,
+    preco: bigint (dias * valor_veiculo)
+    status_pagamento: String,
+    status: String
+}
+
+
+
+POST - /rental
+--header
+Autorization: Bearer jwt
+{
+    vehicle_id,
+    data_inicio,
+    data_fim,
+}
+
+Renpose:
+201 - Created
+{
+    vehicle_id,
+    data_inicio,
+    data_fim,
+    reserva_id: String,
+    preco: bigint (dias * valor_veiculo)
+    status_pagamento: String,
+    status: String
+}
+
+## Evento de reserva criada(SQS): (rental publica, payment consome)
+{
+    vehicle_id,
+    data_inicio,
+    data_fim,
+    reserva_id: String,
+    preco: bigint (dias * valor_veiculo)
+    status_pagamento: String,
+    status: String
+}
+
+// Tela de checkout(fluxo do payment):
+- Informaar cartão, pix...
+
+# Payment
+
+POST - /payment
+{
+    preco: bigint (dias * valor_veiculo),
+    forma_pagamento: CARTAO, PIX...
+    reserva_id: UUID
+}
+
+// Payment dispara email de pagamento
+// usuario paga pelo link do email
+
+// Payment emite um evento para o rental (SQS):
+{
+    reserva_id,
+    status_pagamento: String,
+}
+
+// Outras rotas do payment
+
+GET - /payment
+--header
+Autorization: Bearer Jwt
+[
+    {
+        id,
+        reserva_id,
+        preco: valor,
+        status_pagamento,
+    }
+]
+
+# Notificação postada e consumida na fila SQS
+
+Email {
+    sender_email: String,
+    recipient_email: String,
+    sender_name: String,
+    recipient_name: String,
+    subject: String,
+    content: String,
+}
+--- Fim do Fluxo a ser revisado e formatado
+
+Diagrama nivel 3, em componentes para referencia:
+
 @startuml
 !include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
 
