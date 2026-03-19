@@ -1,3 +1,8 @@
+
+'' Diagrama nivel 2
+''Adicione um container de serviço externo de email, assim como no caso do container do gateway de pagamento
+
+
 @startuml
 !include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
 

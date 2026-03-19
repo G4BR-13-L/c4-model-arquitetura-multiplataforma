@@ -38,6 +38,7 @@ pub async fn start_consumer(
                                     "Email processado e persistido! ID: {}. Enviando...",
                                     saved.id
                                 );
+                                // papercut envio de email
                                 // Simulação de envio: log de "Enviou e-mail"
                                 info!(
                                     "LOG: E-mail enviado com sucesso para {}",
