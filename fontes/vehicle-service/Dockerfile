@@ -12,19 +12,19 @@ EXPOSE 8081
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
-COPY ["Locacao.VehicleServiceApp.csproj", "."]
-RUN dotnet restore "./Locacao.VehicleServiceApp.csproj"
+COPY ["VehicleService.API.csproj", "."]
+RUN dotnet restore "./VehicleService.API.csproj"
 COPY . .
 WORKDIR "/src/."
-RUN dotnet build "./Locacao.VehicleServiceApp.csproj" -c $BUILD_CONFIGURATION -o /app/build
+RUN dotnet build "./VehicleService.API.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 # This stage is used to publish the service project to be copied to the final stage
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "./Locacao.VehicleServiceApp.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+RUN dotnet publish "./VehicleService.API.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
 
 # This stage is used in production or when running from VS in regular mode (Default when not using the Debug configuration)
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "Locacao.VehicleServiceApp.dll"]
+ENTRYPOINT ["dotnet", "VehicleService.API.dll"]
