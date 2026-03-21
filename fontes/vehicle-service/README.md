@@ -1,6 +1,6 @@
 # VehicleService.API
 
-API RESTful para gerenciamento de veiculos e categorias, desenvolvida em **.NET 9** com suporte a autenticacao via Keycloak, observabilidade com OpenTelemetry e Serilog, persistencia com PostgreSQL via Entity Framework Core e documentacao interativa com Swagger.
+API RESTful para gerenciamento de veiculos e categorias, desenvolvida em **.NET 9** com suporte a autenticacao via Keycloak, observabilidade com OpenTelemetry e Serilog, persistencia com PostgreSQL via Entity Framework Core, documentacao interativa com Swagger e mensageria assincrona via AWS SQS/SNS com suporte a LocalStack.
 
 ---
 
@@ -13,6 +13,8 @@ API RESTful para gerenciamento de veiculos e categorias, desenvolvida em **.NET 
   - [Categorias](#categorias)
 - [Autenticacao e Autorizacao](#autenticacao-e-autorizacao)
 - [Banco de Dados](#banco-de-dados)
+- [Mensageria](#mensageria)
+- [Notificacao de E-mail](#notificacao-de-e-mail)
 - [Observabilidade](#observabilidade)
 - [Logging](#logging)
 - [Documentacao da API](#documentacao-da-api)
@@ -37,6 +39,9 @@ API RESTful para gerenciamento de veiculos e categorias, desenvolvida em **.NET 
 | `Microsoft.EntityFrameworkCore` | 9.0.4 | ORM para acesso ao banco de dados |
 | `Microsoft.EntityFrameworkCore.Design` | 9.0.4 | Suporte a ferramentas de design (migrations via CLI) |
 | `Npgsql.EntityFrameworkCore.PostgreSQL` | 9.0.4 | Provider do EF Core para PostgreSQL |
+| `AWSSDK.SQS` | 4.0.x | Cliente AWS SQS para publicacao de mensagens em filas |
+| `AWSSDK.SimpleNotificationService` | 4.0.x | Cliente AWS SNS para publicacao de mensagens em topicos |
+| `AWSSDK.Extensions.NETCore.Setup` | 4.0.x | Integracao do AWS SDK com o host ASP.NET Core |
 | `OpenTelemetry.Extensions.Hosting` | 1.15.0 | Integracao do OpenTelemetry com o host ASP.NET Core |
 | `OpenTelemetry.Instrumentation.AspNetCore` | 1.15.1 | Rastreamento automatico de requisicoes HTTP recebidas |
 | `OpenTelemetry.Instrumentation.Http` | 1.15.0 | Rastreamento automatico de chamadas `HttpClient` |
@@ -136,7 +141,7 @@ Retorna um veiculo pelo seu `id`.
 
 #### `POST /vehicles/{id}/reservation`
 
-Realiza a reserva de um veiculo. Chama o metodo de dominio `Reserve()` e persiste a alteracao.
+Realiza a reserva de um veiculo. Chama o metodo de dominio `Reserve()`, persiste a alteracao e publica uma notificacao de e-mail na fila configurada em `EmailNotification:EmailNotificationQueueName`.
 
 - **Autenticacao:** **requerida** (Bearer JWT)
 - **Respostas:**
@@ -148,7 +153,7 @@ Realiza a reserva de um veiculo. Chama o metodo de dominio `Reserve()` e persist
 
 #### `PUT /vehicles/{id}/return`
 
-Registra a devolucao de um veiculo. Chama o metodo de dominio `Return()` e persiste a alteracao.
+Registra a devolucao de um veiculo. Chama o metodo de dominio `Return()`, persiste a alteracao e publica uma notificacao de e-mail na fila configurada em `EmailNotification:EmailNotificationQueueName`.
 
 - **Autenticacao:** **requerida** (Bearer JWT)
 - **Respostas:**
@@ -233,6 +238,83 @@ Ao iniciar, a aplicacao verifica se existem categorias cadastradas. Caso nao exi
 ```bash
 dotnet ef database update
 ```
+
+---
+
+## Mensageria
+
+A aplicacao utiliza **AWS SQS** e **AWS SNS** para comunicacao assincrona, com suporte a **LocalStack** para execucao local sem necessidade de conta AWS.
+
+### Configuracao
+
+```json
+"LocalStack": {
+  "ServiceUrl": "http://localhost:4566",
+  "Region": "us-east-1",
+  "AccessKey": "test",
+  "SecretKey": "test"
+}
+```
+
+### Abstracao
+
+| Interface | Implementacao | Finalidade |
+|---|---|---|
+| `IMessagePublisher` | `MessagePublisher` | Publica mensagens em filas SQS ou topicos SNS |
+| `IEmailNotificationService` | `EmailNotificationService` | Constroi e envia eventos de notificacao de e-mail |
+
+O registro de todos os servicos de mensageria e feito pela extension method `AddLocalStackMessaging()`, mantendo o `Program.cs` com uma unica linha:
+
+```csharp
+builder.Services.AddLocalStackMessaging(builder.Configuration);
+```
+
+### Subindo o LocalStack
+
+```bash
+docker run -d --name localstack \
+  -p 4566:4566 \
+  localstack/localstack:latest
+```
+
+---
+
+## Notificacao de E-mail
+
+Apos as acoes de **reserva** e **devolucao** de um veiculo, a aplicacao publica automaticamente um evento de notificacao de e-mail na fila SQS configurada.
+
+### Estrutura do evento publicado
+
+```json
+{
+  "event_type": "notification.email",
+  "occurred_at": "2025-01-01T00:00:00Z",
+  "data": {
+    "sender_email": "no-reply@vehicle-service.com",
+    "sender_name": "Vehicle Service",
+    "recipient_email": "",
+    "recipient_name": "",
+    "subject": "Veiculo Gol com placa ABC-1234 reservado.",
+    "content": "{ \"Id\": \"...\", \"Model\": \"Gol\", \"LicensePlate\": \"ABC-1234\" }"
+  }
+}
+```
+
+### Configuracao
+
+```json
+"EmailNotification": {
+  "EmailNotificationQueueName": "notification.email",
+  "SenderEmail": "no-reply@vehicle-service.com",
+  "SenderName": "Vehicle Service"
+}
+```
+
+| Propriedade | Descricao |
+|---|---|
+| `EmailNotificationQueueName` | Nome da fila SQS de destino para as notificacoes |
+| `SenderEmail` | E-mail remetente preenchido no evento |
+| `SenderName` | Nome do remetente preenchido no evento |
 
 ---
 
@@ -348,8 +430,13 @@ docker run -d --name keycloak \
 # Jaeger
 docker run -d --name jaeger \
   -p 16686:16686 \
-  -p 4318:4318 \
+  -p 4317:4317 \
   jaegertracing/all-in-one:latest
+
+# LocalStack (SQS/SNS)
+docker run -d --name localstack \
+  -p 4566:4566 \
+  localstack/localstack:latest
 ```
 
 ### Executando a API
