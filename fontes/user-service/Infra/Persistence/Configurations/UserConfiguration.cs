@@ -31,7 +31,11 @@ namespace UserService.API.Infra.Persistence.Configurations
                 .HasMaxLength(200)
                 .IsRequired();
 
-            builder.Property(x => x.IdpId)
+            builder.Property(x => x.DocumentNumber)
+                .HasMaxLength(50)
+                .IsRequired();
+
+            builder.Property(x => x.KeyCloakId)
                 .HasMaxLength(100)
                 .IsRequired();
 
@@ -48,7 +52,7 @@ namespace UserService.API.Infra.Persistence.Configurations
             builder.HasIndex(x => x.Email)
                 .IsUnique();
 
-            builder.HasIndex(x => x.IdpId)
+            builder.HasIndex(x => x.KeyCloakId)
                 .IsUnique();
         }
     }
