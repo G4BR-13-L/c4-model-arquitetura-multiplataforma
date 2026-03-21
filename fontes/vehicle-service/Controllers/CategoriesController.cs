@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using VehicleService.API.Controllers.DTOs;
 using VehicleService.API.Data;
+using VehicleService.API.Models.DTOs;
 
 namespace VehicleService.API.Controllers
 {

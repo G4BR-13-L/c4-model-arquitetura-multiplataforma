@@ -1,7 +1,10 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using VehicleService.API.Controllers.DTOs;
+using Microsoft.Extensions.Options;
+using System.Text.Json;
 using VehicleService.API.Data;
+using VehicleService.API.Infra.Notifications;
+using VehicleService.API.Models.DTOs;
 
 namespace VehicleService.API.Controllers
 {
@@ -10,11 +13,19 @@ namespace VehicleService.API.Controllers
     public sealed class VehiclesController : ControllerBase
     {
         private readonly AppDbContext _context;
+        private readonly IEmailNotificationService _emailNotification;
+        private readonly EmailNotificationOptions _emailOptions;
         private readonly ILogger<VehiclesController> _logger;
 
-        public VehiclesController(AppDbContext context, ILogger<VehiclesController> logger)
+        public VehiclesController(
+            AppDbContext context,
+            IEmailNotificationService emailNotification,
+            IOptions<EmailNotificationOptions> emailOptions,
+            ILogger<VehiclesController> logger)
         {
             _context = context;
+            _emailNotification = emailNotification;
+            _emailOptions = emailOptions.Value;
             _logger = logger;
         }
 
@@ -85,6 +96,13 @@ namespace VehicleService.API.Controllers
 
             _logger.LogInformation("Veículo com id {VehicleId} reservado com sucesso", id);
 
+            await _emailNotification.SendAsync(
+                recipientEmail: string.Empty,
+                recipientName: string.Empty,
+                subject: $"Veículo {vehicle.Model} com placa {vehicle.LicensePlate} reservado.",
+                content: JsonSerializer.Serialize(VehicleReservedDto.Create(vehicle), new JsonSerializerOptions { WriteIndented = true }),
+                queueName: _emailOptions.EmailNotificationQueueName);
+
             return NoContent();
         }
 
@@ -107,6 +125,13 @@ namespace VehicleService.API.Controllers
             await _context.SaveChangesAsync();
 
             _logger.LogInformation("Veículo com id {VehicleId} devolvido com sucesso", id);
+
+            await _emailNotification.SendAsync(
+                recipientEmail: string.Empty,
+                recipientName: string.Empty,
+                subject: $"Veículo {vehicle.Model} com placa {vehicle.LicensePlate} devolvido.",
+                content: JsonSerializer.Serialize(VehicleReturnedDto.Create(vehicle), new JsonSerializerOptions { WriteIndented = true }),
+                queueName: _emailOptions.EmailNotificationQueueName);
 
             return NoContent();
         }

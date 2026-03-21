@@ -1,11 +1,14 @@
 
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.OpenApi.Models;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Serilog;
 using VehicleService.API.Data;
 using VehicleService.API.Infra.Data;
+using VehicleService.API.Infra.Messaging;
+using VehicleService.API.Infra.Notifications;
 
 namespace VehicleService.API
 {
@@ -26,25 +29,25 @@ namespace VehicleService.API
                     .ReadFrom.Services(services)
                     .WriteTo.Console());
 
-            // Add services to the container.
+                // Add services to the container.
 
-            builder.Services.AddDbContext<AppDbContext>(options =>
-                options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+                builder.Services.AddDbContext<AppDbContext>(options =>
+                    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-            builder.Services.AddControllers();
-            builder.Services.AddEndpointsApiExplorer();
-            builder.Services.AddSwaggerGen(options =>
-            {
-                options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+                builder.Services.AddControllers();
+                builder.Services.AddEndpointsApiExplorer();
+                builder.Services.AddSwaggerGen(options =>
                 {
-                    Name = "Authorization",
-                    Type = SecuritySchemeType.Http,
-                    Scheme = "bearer",
-                    BearerFormat = "JWT",
-                    In = ParameterLocation.Header
-                });
-                options.AddSecurityRequirement(new OpenApiSecurityRequirement
-                {
+                    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+                    {
+                        Name = "Authorization",
+                        Type = SecuritySchemeType.Http,
+                        Scheme = "bearer",
+                        BearerFormat = "JWT",
+                        In = ParameterLocation.Header
+                    });
+                    options.AddSecurityRequirement(new OpenApiSecurityRequirement
+                    {
                     {
                         new OpenApiSecurityScheme
                         {
@@ -56,21 +59,26 @@ namespace VehicleService.API
                         },
                         Array.Empty<string>()
                     }
-                });
-            });
-
-            builder.Services
-                .AddAuthentication(Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerDefaults.AuthenticationScheme)
-                .AddJwtBearer(options =>
-                {
-                    options.Authority = builder.Configuration["Keycloak:Authority"];
-                    options.Audience = builder.Configuration["Keycloak:Audience"];
-                    options.RequireHttpsMetadata = bool.Parse(builder.Configuration["Keycloak:RequireHttpsMetadata"] ?? "true");
+                    });
                 });
 
-            builder.Services.AddAuthorization();
+                builder.Services
+                    .AddAuthentication(Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerDefaults.AuthenticationScheme)
+                    .AddJwtBearer(options =>
+                    {
+                        options.Authority = builder.Configuration["Keycloak:Authority"];
+                        options.Audience = builder.Configuration["Keycloak:Audience"];
+                        options.RequireHttpsMetadata = bool.Parse(builder.Configuration["Keycloak:RequireHttpsMetadata"] ?? "true");
+                    });
 
-            builder.Services.AddOpenTelemetry()
+                builder.Services.AddAuthorization();
+
+                builder.Services.AddLocalStackMessaging(builder.Configuration);
+
+                builder.Services.Configure<EmailNotificationOptions>(builder.Configuration.GetSection(EmailNotificationOptions.SectionName));
+                builder.Services.AddScoped<IEmailNotificationService, EmailNotificationService>();
+
+                builder.Services.AddOpenTelemetry()
                 .ConfigureResource(resource => resource
                     .AddService(serviceName: builder.Configuration["OpenTelemetry:ServiceName"] ?? "vehicle-service"))
                 .WithTracing(tracing => tracing
@@ -82,38 +90,38 @@ namespace VehicleService.API
                         otlp.Endpoint = new Uri(builder.Configuration["OpenTelemetry:OtlpEndpoint"] ?? "http://localhost:4318");
                     }));
 
-            var app = builder.Build();
+                var app = builder.Build();
 
-            // Configure the HTTP request pipeline.
-            app.UseSwagger();
-            app.UseSwaggerUI();
+                // Configure the HTTP request pipeline.
+                app.UseSwagger();
+                app.UseSwaggerUI();
 
-            app.UseSerilogRequestLogging();
+                app.UseSerilogRequestLogging();
 
-            app.UseHttpsRedirection();
+                app.UseHttpsRedirection();
 
-            app.UseAuthentication();
-            app.UseAuthorization();
+                app.UseAuthentication();
+                app.UseAuthorization();
 
-            app.MapControllers();
+                app.MapControllers();
 
-            app.Lifetime.ApplicationStarted.Register(async () =>
-            {
-                try
+                app.Lifetime.ApplicationStarted.Register(async () =>
                 {
-                    using var scope = app.Services.CreateScope();
-                    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-                    await db.Database.MigrateAsync();
-                    await DatabaseSeeder.SeedAsync(db);
-                }
-                catch (Exception ex)
-                {
-                    var logger = app.Services.GetRequiredService<ILogger<Program>>();
-                    logger.LogError(ex, "An error occurred while migrating or seeding the database.");
-                }
-            });
+                    try
+                    {
+                        using var scope = app.Services.CreateScope();
+                        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+                        await db.Database.MigrateAsync();
+                        await DatabaseSeeder.SeedAsync(db);
+                    }
+                    catch (Exception ex)
+                    {
+                        var logger = app.Services.GetRequiredService<ILogger<Program>>();
+                        logger.LogError(ex, "An error occurred while migrating or seeding the database.");
+                    }
+                });
 
-            await app.RunAsync();
+                await app.RunAsync();
             }
             catch (Exception ex)
             {

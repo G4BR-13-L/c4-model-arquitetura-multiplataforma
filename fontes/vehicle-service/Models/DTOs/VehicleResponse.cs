@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace VehicleService.API.Controllers.DTOs
+namespace VehicleService.API.Models.DTOs
 {
     public sealed record VehicleResponse(
         [property: JsonPropertyName("id")] Guid Id,
