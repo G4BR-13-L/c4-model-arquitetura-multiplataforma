@@ -127,8 +127,8 @@ namespace VehicleService.API.Controllers
             _logger.LogInformation("Veículo com id {VehicleId} devolvido com sucesso", id);
 
             await _emailNotification.SendAsync(
-                recipientEmail: string.Empty,
-                recipientName: string.Empty,
+                recipientEmail: "system@vehicle-service.com.br",
+                recipientName: "System",
                 subject: $"Veículo {vehicle.Model} com placa {vehicle.LicensePlate} devolvido.",
                 content: JsonSerializer.Serialize(VehicleReturnedDto.Create(vehicle), new JsonSerializerOptions { WriteIndented = true }),
                 queueName: _emailOptions.EmailNotificationQueueName);

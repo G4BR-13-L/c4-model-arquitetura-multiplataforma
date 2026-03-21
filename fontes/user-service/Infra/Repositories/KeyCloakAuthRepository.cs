@@ -17,17 +17,21 @@ namespace UserService.API.Infra.Repositories
     {
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly KeyCloakSettings _settings;
+        private readonly ILogger<KeyCloakAuthRepository> _logger;
 
         public KeyCloakAuthRepository(
             IHttpClientFactory httpClientFactory,
-            IOptions<KeyCloakSettings> settings)
+            IOptions<KeyCloakSettings> settings,
+            ILogger<KeyCloakAuthRepository> logger)
         {
             _httpClientFactory = httpClientFactory;
             _settings = settings.Value;
+            _logger = logger;
         }
 
         public async Task<AccessTokenResult> GetTokenAsync()
         {
+            _logger.LogInformation("Solicitando token via client_credentials");
             var body = new Dictionary<string, string>
             {
                 { "grant_type", "client_credentials" },
@@ -40,6 +44,7 @@ namespace UserService.API.Infra.Repositories
 
         public async Task<AccessTokenResult> GetTokenAsync(string userName, string password)
         {
+            _logger.LogInformation("Solicitando token via password para o usuário {Usuario}", userName);
             var body = new Dictionary<string, string>
             {
                 { "grant_type", "password" },
@@ -54,6 +59,7 @@ namespace UserService.API.Infra.Repositories
 
         public async Task<AccessTokenResult> RefreshTokenAsync(string refreshToken)
         {
+            _logger.LogInformation("Solicitando renovação de token via refresh_token");
             var body = new Dictionary<string, string>
             {
                 { "grant_type", "refresh_token" },
@@ -67,6 +73,7 @@ namespace UserService.API.Infra.Repositories
 
         public async Task LogoutAsync(string refreshToken)
         {
+            _logger.LogInformation("Enviando requisição de logout para o KeyCloak");
             var body = new Dictionary<string, string>
             {
                 { "client_id", _settings.ClientId },
@@ -82,10 +89,12 @@ namespace UserService.API.Infra.Repositories
             };
 
             await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+            _logger.LogInformation("Requisição de logout enviada com sucesso");
         }
 
         private async Task<AccessTokenResult> PostTokenAsync(Dictionary<string, string> body)
         {
+            _logger.LogInformation("Enviando requisição de token para o KeyCloak");
             using var client = _httpClientFactory.CreateClient("KeyCloakAuth");
 
             var request = new HttpRequestMessage(HttpMethod.Post, "protocol/openid-connect/token")
@@ -96,9 +105,13 @@ namespace UserService.API.Infra.Repositories
             var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
 
             if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("Falha ao obter token do KeyCloak. StatusCode: {StatusCode}", response.StatusCode);
                 return null;
+            }
 
             var responseContent = await response.Content.ReadAsStringAsync();
+            _logger.LogInformation("Token obtido com sucesso do KeyCloak");
             return JsonSerializer.Deserialize<AccessTokenResult>(responseContent);
         }
     }
