@@ -1,22 +1,12 @@
-FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS base
-USER $APP_UID
+FROM golang:1.24-alpine AS builder
 WORKDIR /app
-EXPOSE 8080
+COPY go.mod go.sum ./
+RUN go mod download
+COPY main.go ./
+RUN CGO_ENABLED=0 GOOS=linux go build -o api .
 
-FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
-ARG BUILD_CONFIGURATION=Release
-WORKDIR /src
-COPY ["Locacao.PaymentService.csproj", "."]
-RUN dotnet restore "./Locacao.PaymentService.csproj"
-COPY . .
-WORKDIR "/src/."
-RUN dotnet build "./Locacao.PaymentService.csproj" -c $BUILD_CONFIGURATION -o /app/build
-
-FROM build AS publish
-ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "./Locacao.PaymentService.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
-
-FROM base AS final
+FROM scratch
 WORKDIR /app
-COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "Locacao.PaymentService.dll"]
+COPY --from=builder /app/api .
+EXPOSE 3005
+CMD ["./api"]
