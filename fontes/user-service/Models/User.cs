@@ -5,25 +5,28 @@
         public User()
         {
             Id = Guid.NewGuid();
-            CreatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified);
+            CreatedAt = DateTime.Now;
         }
 
-        public Guid Id { get; set; }
-        public string UserName { get; set; }
-        public string FirstName { get; set; }
-        public string LastName { get; set; }
-        public string Email { get; set; }
-        public string IdpId { get; private set; }
-        public DateTime CreatedAt { get; set; }
+        public Guid Id { get; init; }
+        public string UserName { get; init; }
+        public string FirstName { get; init; }
+        public string LastName { get; init; }
+        public string Email { get; init; }
+        public string DocumentNumber { get; init; }
+        public string KeyCloakId { get; private set; }
+        public DateTime CreatedAt { get; init; }
+        public DateTime UpdatedAt { get; private set; }
 
         public void SetIdpId(string idpId)
         {
             ArgumentNullException.ThrowIfNullOrWhiteSpace(idpId);
 
-            if (IdpId is not null)
-                throw new InvalidOperationException("IdpId já foi atribuido anteriormente!");
+            if (KeyCloakId is not null)
+                throw new InvalidOperationException("KeyCloakId já foi atribuido anteriormente!");
 
-            IdpId = idpId;
+            KeyCloakId = idpId;
+            UpdatedAt = DateTime.Now;
         }
     }
 }
