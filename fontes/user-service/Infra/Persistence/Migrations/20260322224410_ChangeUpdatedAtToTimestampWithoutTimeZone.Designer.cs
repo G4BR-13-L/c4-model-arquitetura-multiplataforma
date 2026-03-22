@@ -11,9 +11,9 @@ using UserService.API.Infra.Persistence;
 
 namespace UserService.API.Infra.Persistence.Migrations
 {
-    [DbContext(typeof(UserDbContext))]
-    [Migration("20260314214044_ChangeCreatedAtToTimestampWithoutTimeZone")]
-    partial class ChangeCreatedAtToTimestampWithoutTimeZone
+    [DbContext(typeof(AppDbContext))]
+    [Migration("20260322224410_ChangeUpdatedAtToTimestampWithoutTimeZone")]
+    partial class ChangeUpdatedAtToTimestampWithoutTimeZone
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -33,6 +33,11 @@ namespace UserService.API.Infra.Persistence.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp without time zone");
 
+                    b.Property<string>("DocumentNumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -43,7 +48,7 @@ namespace UserService.API.Infra.Persistence.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
-                    b.Property<string>("IdpId")
+                    b.Property<string>("KeyCloakId")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
@@ -52,6 +57,9 @@ namespace UserService.API.Infra.Persistence.Migrations
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<string>("UserName")
                         .IsRequired()
@@ -63,7 +71,7 @@ namespace UserService.API.Infra.Persistence.Migrations
                     b.HasIndex("Email")
                         .IsUnique();
 
-                    b.HasIndex("IdpId")
+                    b.HasIndex("KeyCloakId")
                         .IsUnique();
 
                     b.HasIndex("UserName")

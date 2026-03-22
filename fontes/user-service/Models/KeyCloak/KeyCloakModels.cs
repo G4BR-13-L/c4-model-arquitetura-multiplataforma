@@ -10,6 +10,7 @@ namespace UserService.API.Models.KeyCloak
         public string lastName { get; init; }
         public string email { get; init; }
         public bool emailVerified { get; } = true;
+        public Dictionary<string, List<string>> attributes { get; init; }
 
         public static CreateUserKeyCloakRequest Create(User user)
         {
@@ -18,7 +19,11 @@ namespace UserService.API.Models.KeyCloak
                 username = user.UserName,
                 firstName = user.FirstName,
                 lastName = user.LastName,
-                email = user.Email
+                email = user.Email,
+                attributes = new() 
+                {
+                    { "userId", [ user.Id.ToString() ] }
+                }
             };
         }
     }

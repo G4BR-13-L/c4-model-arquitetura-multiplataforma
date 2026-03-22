@@ -46,6 +46,12 @@ namespace UserService.API.Infra.Persistence.Configurations
                     value => DateTime.SpecifyKind(value, DateTimeKind.Unspecified))
                 .IsRequired();
 
+            builder.Property(x => x.UpdatedAt)
+                .HasColumnType("timestamp without time zone")
+                .HasConversion(
+                    value => DateTime.SpecifyKind(value, DateTimeKind.Unspecified),
+                    value => DateTime.SpecifyKind(value, DateTimeKind.Unspecified));
+
             builder.HasIndex(x => x.UserName)
                 .IsUnique();
 
