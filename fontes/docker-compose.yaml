@@ -74,7 +74,7 @@ services:
   # ── Vehicle Service ───────────────────────────────────────────────
   vehicle-service-api:
     build:
-      context: ./Locacao.VehicleServiceApp
+      context: ./vehicle-service
       dockerfile: Dockerfile
     container_name: vehicle-service-api
     ports:
@@ -228,7 +228,7 @@ services:
       driver: none
     image: localstack/localstack:1.3
     ports:
-      - '127.0.0.1:4566:4566
+      - '127.0.0.1:4566:4566'
       - '127.0.0.1:4510-4559:4510-4559'
     networks:
       - locacao-net
