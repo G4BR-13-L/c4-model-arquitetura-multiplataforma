@@ -5,39 +5,34 @@ use uuid::Uuid;
 
 use crate::domain::value_objects::{email_field::EmailField, name_field::NameField};
 
-#[derive(Debug, Clone, FromRow, Default, Serialize, Deserialize)] // Adicionado Default aqui
+#[derive(Debug, Clone, FromRow, Default, Serialize, Deserialize)]
 pub struct Email {
     #[serde(default)]
     #[sqlx(default)]
     pub id: Uuid,
 
-    #[sqlx(default)]
     pub sender_email: EmailField,
-
-    #[sqlx(default)]
     pub recipient_email: EmailField,
-
-    #[sqlx(default)]
     pub sender_name: NameField,
-
-    #[sqlx(default)]
     pub recipient_name: NameField,
-
-    #[sqlx(default)]
     pub subject: String,
-
-    #[sqlx(default)]
     pub content: String,
 
+    #[serde(default)] // Garante que o Serde não quebre se não vier no JSON
     #[sqlx(default)]
     pub original_json: String,
 
+    #[serde(default = "default_status")] // Define um status padrão
     #[sqlx(default)]
     pub status: String,
 
     #[serde(skip_deserializing)]
     #[sqlx(default)]
     pub inserted_at: DateTime<Utc>,
+}
+
+fn default_status() -> String {
+    "PENDING".to_string()
 }
 
 impl std::fmt::Display for Email {

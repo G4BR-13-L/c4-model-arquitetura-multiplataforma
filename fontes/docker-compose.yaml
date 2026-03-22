@@ -1,7 +1,6 @@
 name: trab-arq-multiplataforma
 
 services:
-
   # ── Keycloak DB ───────────────────────────────────────────────────
   keycloak-db:
     image: postgres:15
@@ -112,7 +111,7 @@ services:
 
   # ── Notification Service DB ───────────────────────────────────────
   notification-service-db:
-    image: postgres:15
+    image: postgres:17
     container_name: notification-service-db
     restart: always
     environment:
@@ -136,11 +135,14 @@ services:
     ports:
       - "7005:8080"
     environment:
-      DATABASE_URL: postgres://postgres:postgres@notification-service-db:5432/notification_service
-      APP_ENVIRONMENT: dev
+      - DATABASE_URL=postgres://postgres:postgres@notification-service-db:5432/notification_service
+      - SQS_ENDPOINT=http://localstack:4566 # ADICIONE ISSO
+      - APP_ENVIRONMENT=dev
     depends_on:
       notification-service-db:
         condition: service_healthy
+      localstack:
+        condition: service_started
     networks:
       - locacao-net
 
@@ -169,7 +171,7 @@ services:
       KONG_DATABASE: postgres
       KONG_PG_HOST: kong-database
       KONG_PG_USER: kong
-      KONG_PG_PASSWORD: kongpass  
+      KONG_PG_PASSWORD: kongpass
       KONG_PG_DATABASE: kong
     networks:
       - locacao-net
@@ -224,18 +226,19 @@ services:
 
   localstack:
     container_name: localstack
-    logging:
-      driver: none
     image: localstack/localstack:1.3
     ports:
-      - '127.0.0.1:4566:4566
-      - '127.0.0.1:4510-4559:4510-4559'
+      - "127.0.0.1:4566:4566"
     networks:
       - locacao-net
+    environment:
+      - SERVICES=sqs
+      - AWS_DEFAULT_REGION=us-east-1
+      - DEBUG=1
     volumes:
-      - '${TEMPDIR:-/var/lib/localstack}:/var/lib/localstack'
-      - '/var/run/docker.sock:/var/run/docker.sock'
-      - ./.docker/entrypoint-localstack.sh:/docker-entrypoint-initaws.d/setup.sh
+      # Caminho corrigido para o LocalStack 1.3+ executar no momento "READY"
+      - ./.docker/entrypoint-localstack.sh:/etc/localstack/init/ready.d/setup.sh
+      - "/var/run/docker.sock:/var/run/docker.sock"
 
 networks:
   locacao-net:
