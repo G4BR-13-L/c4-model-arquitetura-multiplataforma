@@ -1,7 +1,9 @@
 use aws_sdk_sqs::Client;
+use crate::domain::sqs_email::SQSEmailMessage;
 use crate::{application::service::email_error_service::EmailErrorService, domain::email::Email};
 use crate::application::service::email_service::EmailService;
 use std::error::Error;
+use std::fmt::Display;
 use tracing::{info, error};
 
 pub async fn start_consumer(
@@ -26,13 +28,16 @@ pub async fn start_consumer(
                 let body = message.body().unwrap_or("");
 
                 // 1. Tenta deserializar e validar
-                match serde_json::from_str::<Email>(body) {
-                    Ok(mut email_data) => {
+                match serde_json::from_str::<SQSEmailMessage>(body) {
+                    Ok(mut sqs_email_message_data) => {
                         // Atribui o JSON original para auditoria conforme sua struct
-                        email_data.original_json = body.to_string();
+                        sqs_email_message_data.data.original_json = body.to_string();
+
+                        info!("Consumindo mensagem");
+                        info!("{sqs_email_message_data}");
 
                         // 2. Persiste via Service (que já faz o find_or_create)
-                        match email_service.insert(&email_data).await {
+                        match email_service.insert(&sqs_email_message_data.data).await {
                             Ok(saved) => {
                                 info!(
                                     "Email processado e persistido! ID: {}. Enviando...",

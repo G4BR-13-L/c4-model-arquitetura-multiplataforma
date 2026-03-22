@@ -1,7 +1,6 @@
 name: trab-arq-multiplataforma
 
 services:
-
   # ── Keycloak DB ───────────────────────────────────────────────────
   keycloak-db:
     image: postgres:alpine
@@ -43,13 +42,13 @@ services:
       driver: none
     image: localstack/localstack:stable
     ports:
-      - '127.0.0.1:4566:4566'
-      - '127.0.0.1:4510-4559:4510-4559'
+      - "127.0.0.1:4566:4566"
+      - "127.0.0.1:4510-4559:4510-4559"
     networks:
       - locacao-net
     volumes:
-      - '${TEMPDIR:-/var/lib/localstack}:/var/lib/localstack'
-      - '/var/run/docker.sock:/var/run/docker.sock'
+      - "${TEMPDIR:-/var/lib/localstack}:/var/lib/localstack"
+      - "/var/run/docker.sock:/var/run/docker.sock"
       - ./.docker/entrypoint-localstack.sh:/docker-entrypoint-initaws.d/setup.sh
 
   # ── Jaeger ───────────────────────────────────────────────────────
@@ -182,11 +181,14 @@ services:
     ports:
       - "7005:8080"
     environment:
-      DATABASE_URL: postgres://postgres:postgres@notification-service-db:5432/notification_service
-      APP_ENVIRONMENT: dev
+      - DATABASE_URL=postgres://postgres:postgres@notification-service-db:5432/notification_service
+      - SQS_ENDPOINT=http://localstack:4566
+      - APP_ENVIRONMENT=dev
     depends_on:
       notification-service-db:
         condition: service_healthy
+      localstack:
+        condition: service_started
     networks:
       - locacao-net
 
@@ -215,7 +217,7 @@ services:
       KONG_DATABASE: postgres
       KONG_PG_HOST: kong-database
       KONG_PG_USER: kong
-      KONG_PG_PASSWORD: kongpass  
+      KONG_PG_PASSWORD: kongpass
       KONG_PG_DATABASE: kong
     networks:
       - locacao-net
@@ -266,7 +268,7 @@ services:
     networks:
       - locacao-net
     depends_on:
-      - kong  
+      - kong
 
 networks:
   locacao-net:
