@@ -1,22 +1,12 @@
-FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS base
-USER $APP_UID
+FROM node:22-alpine AS base
 WORKDIR /app
 EXPOSE 8080
 
-FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
-ARG BUILD_CONFIGURATION=Release
-WORKDIR /src
-COPY ["Locacao.RentalService.csproj", "."]
-RUN dotnet restore "./Locacao.RentalService.csproj"
-COPY . .
-WORKDIR "/src/."
-RUN dotnet build "./Locacao.RentalService.csproj" -c $BUILD_CONFIGURATION -o /app/build
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev
 
-FROM build AS publish
-ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "./Locacao.RentalService.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+COPY src ./src
+COPY README.md ./README.md
 
-FROM base AS final
-WORKDIR /app
-COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "Locacao.RentalService.dll"]
+ENV NODE_ENV=production
+CMD ["npm", "start"]

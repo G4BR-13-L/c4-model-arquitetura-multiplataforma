@@ -93,9 +93,24 @@ services:
     ports:
       - "7003:8080"
     environment:
-      ASPNETCORE_ENVIRONMENT: Development
+      NODE_ENV: production
+      PORT: 8080
+      VEHICLE_SERVICE_BASE_URL: http://vehicle-service-api:8080
+      KEYCLOAK_AUTHORITY: http://keycloak:8080/realms/master
+      KEYCLOAK_CLIENT_ID: user-service-api
+      KEYCLOAK_CLIENT_SECRET: AeA2Tie5N7TXQHflE2AXvuAqoq1zTDFY
+      SQS_ENDPOINT: http://localstack:4566
+      AWS_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      RENTAL_CREATED_QUEUE_NAME: rental.created
+      PAYMENT_CONFIRMED_QUEUE_NAME: payment.confirmed
     networks:
       - locacao-net
+    depends_on:
+      - vehicle-service-api
+      - keycloak
+      - localstack
 
   # ── Payment Service ───────────────────────────────────────────────
   payment-service-api:

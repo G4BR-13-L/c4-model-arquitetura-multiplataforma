@@ -1,0 +1,14 @@
+{
+  "name": "rental-service",
+  "version": "1.0.0",
+  "description": "Rental service implemented in Node.js following the revised API contract.",
+  "main": "src/server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node src/server.js",
+    "check": "node --check src/server.js"
+  },
+  "dependencies": {
+    "@aws-sdk/client-sqs": "^3.883.0"
+  }
+}
