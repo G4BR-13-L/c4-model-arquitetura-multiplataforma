@@ -18,20 +18,20 @@ namespace UserService.API.Services
         Task<ServiceResult<GetUsersResponse>> GetUserByIdAsync(Guid id);
     }
 
-    public sealed class UserService : IUserService
+    public sealed class UsersService : IUserService
     {
         private readonly IKeyCloakService _keyCloakService;
-        private readonly UserDbContext _dbContext;
+        private readonly AppDbContext _dbContext;
         private readonly IEmailNotificationService _emailNotification;
         private readonly EmailNotificationOptions _emailOptions;
-        private readonly ILogger<UserService> _logger;
+        private readonly ILogger<UsersService> _logger;
 
-        public UserService(
+        public UsersService(
             IKeyCloakService keyCloakService,
-            UserDbContext dbContext,
+            AppDbContext dbContext,
             IEmailNotificationService emailNotification,
             IOptions<EmailNotificationOptions> emailOptions,
-            ILogger<UserService> logger)
+            ILogger<UsersService> logger)
         {
             _keyCloakService = keyCloakService;
             _dbContext = dbContext;
