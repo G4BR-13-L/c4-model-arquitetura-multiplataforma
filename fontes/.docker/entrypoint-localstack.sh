@@ -14,6 +14,7 @@ awslocal sqs create-queue \
   --queue-name notification_send_email.fifo \
   --attributes FifoQueue=true,ContentBasedDeduplication=true
 
+
 # Opcional: Lista para confirmar nos logs do container
 awslocal sqs list-queues
 

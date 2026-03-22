@@ -1,8 +1,11 @@
-FROM lukemathwalker/cargo-chef:latest-rust-1.80 AS chef
+FROM lukemathwalker/cargo-chef:latest-rust-1.88 AS chef
 WORKDIR /app
 
 FROM chef AS planner
-COPY . .
+# Copia apenas o que é estritamente necessário para a receita
+COPY Cargo.toml Cargo.lock ./
+COPY src ./src/ 
+# Se tiver outros folders de crates (workspace), copie-os aqui
 RUN cargo chef prepare --recipe-path recipe.json
 
 FROM chef AS builder
