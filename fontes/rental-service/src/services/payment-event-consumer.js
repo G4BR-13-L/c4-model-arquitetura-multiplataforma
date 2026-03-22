@@ -1,9 +1,10 @@
 const {
   SQSClient,
   DeleteMessageCommand,
-  GetQueueUrlCommand,
   ReceiveMessageCommand
 } = require("@aws-sdk/client-sqs");
+const { AwsQueryProtocol } = require("@aws-sdk/core/protocols");
+const { getQueueUrlOrCreate } = require("./sqs-helper");
 
 class PaymentEventConsumer {
   constructor(config, logger, rentalService) {
@@ -15,7 +16,8 @@ class PaymentEventConsumer {
     this.timer = null;
     this.sqsClient = new SQSClient({
       region: config.awsRegion,
-      endpoint: config.sqsEndpoint
+      endpoint: config.sqsEndpoint,
+      protocol: AwsQueryProtocol
     });
   }
 
@@ -111,11 +113,12 @@ class PaymentEventConsumer {
       return this.queueUrl;
     }
 
-    const response = await this.sqsClient.send(new GetQueueUrlCommand({
-      QueueName: this.config.paymentConfirmedQueueName
-    }));
+    this.queueUrl = await getQueueUrlOrCreate(
+      this.sqsClient,
+      this.config.paymentConfirmedQueueName,
+      this.logger
+    );
 
-    this.queueUrl = response.QueueUrl;
     return this.queueUrl;
   }
 }

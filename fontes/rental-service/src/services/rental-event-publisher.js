@@ -1,8 +1,9 @@
 const {
   SQSClient,
-  GetQueueUrlCommand,
   SendMessageCommand
 } = require("@aws-sdk/client-sqs");
+const { AwsQueryProtocol } = require("@aws-sdk/core/protocols");
+const { getQueueUrlOrCreate } = require("./sqs-helper");
 
 class RentalEventPublisher {
   constructor(config, logger) {
@@ -11,7 +12,8 @@ class RentalEventPublisher {
     this.queueUrl = null;
     this.sqsClient = new SQSClient({
       region: config.awsRegion,
-      endpoint: config.sqsEndpoint
+      endpoint: config.sqsEndpoint,
+      protocol: AwsQueryProtocol
     });
   }
 
@@ -56,11 +58,12 @@ class RentalEventPublisher {
       return this.queueUrl;
     }
 
-    const response = await this.sqsClient.send(new GetQueueUrlCommand({
-      QueueName: this.queueName
-    }));
+    this.queueUrl = await getQueueUrlOrCreate(
+      this.sqsClient,
+      this.queueName,
+      this.logger
+    );
 
-    this.queueUrl = response.QueueUrl;
     return this.queueUrl;
   }
 }

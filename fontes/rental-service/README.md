@@ -24,8 +24,8 @@ Compatibilidade legada:
 - `KEYCLOAK_CLIENT_SECRET`: segredo para obter token de servico quando o rental precisar chamar outro servico sem token de usuario.
 - `AWS_REGION`: regiao do SQS. Padrao `us-east-1`.
 - `SQS_ENDPOINT`: endpoint do LocalStack/AWS. Ex.: `http://localstack:4566`.
-- `RENTAL_CREATED_QUEUE_NAME`: fila para o evento `rental.created`. Padrao `rental.created`.
-- `PAYMENT_CONFIRMED_QUEUE_NAME`: fila consumida para `payment.confirmed`. Padrao `payment.confirmed`.
+- `RENTAL_CREATED_QUEUE_NAME`: fila para o evento `rental.created`. Padrao `rental-created`.
+- `PAYMENT_CONFIRMED_QUEUE_NAME`: fila consumida para `payment.confirmed`. Padrao `payment-confirmed`.
 - `PAYMENT_EVENTS_ENABLED`: ativa o consumidor de pagamentos. Padrao `true`.
 
 ## Executar localmente
