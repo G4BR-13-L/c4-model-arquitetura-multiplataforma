@@ -138,14 +138,16 @@ services:
       PORT: 8080
       VEHICLE_SERVICE_BASE_URL: http://vehicle-service-api:8080
       KEYCLOAK_AUTHORITY: http://keycloak:8080/realms/master
-      KEYCLOAK_CLIENT_ID: user-service-api
-      KEYCLOAK_CLIENT_SECRET: AeA2Tie5N7TXQHflE2AXvuAqoq1zTDFY
+      KEYCLOAK_CLIENT_ID: rental-service-api
+      KEYCLOAK_CLIENT_SECRET: YWjsmDWVGhyTLsoLtsLjPouLv46eeNkw
       SQS_ENDPOINT: http://localstack:4566
       AWS_REGION: us-east-1
       AWS_ACCESS_KEY_ID: test
       AWS_SECRET_ACCESS_KEY: test
-      RENTAL_CREATED_QUEUE_NAME: rental.created
-      PAYMENT_CONFIRMED_QUEUE_NAME: payment.confirmed
+      RENTAL_CREATED_QUEUE_NAME: rental-created
+      PAYMENT_CONFIRMED_QUEUE_NAME: payment-confirmed
+    volumes:
+      - ./rental-service/src:/app/src:delegated
     networks:
       - locacao-net
     depends_on:
