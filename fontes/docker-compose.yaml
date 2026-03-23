@@ -88,11 +88,7 @@ services:
     ports:
       - "7001:8080"
     environment:
-      ASPNETCORE_ENVIRONMENT: Development
-      KeyCloakSettings__BaseUrl: http://keycloak:8080
-      KeyCloakSettings__Realm: master
-      KeyCloakSettings__ClientId: user-service-api
-      KeyCloakSettings__ClientSecret: AeA2Tie5N7TXQHflE2AXvuAqoq1zTDFY
+      ASPNETCORE_ENVIRONMENT: Production      
     depends_on:
       - user-service-db
       - keycloak
@@ -125,7 +121,7 @@ services:
       - vehicle-service-db
       - localstack
     environment:
-      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_ENVIRONMENT: Production
     networks:
       - locacao-net
 
