@@ -138,6 +138,18 @@ services:
     networks:
       - locacao-net
 
+  # ── Payment Service DB ────────────────────────────────────────────
+  payment-service-db:
+    image: postgres:alpine
+    container_name: payment-service-db
+    restart: always
+    environment:
+      POSTGRES_DB: payment
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    networks:
+      - locacao-net
+
   # ── Payment Service ───────────────────────────────────────────────
   payment-service-api:
     build:
@@ -145,9 +157,16 @@ services:
       dockerfile: Dockerfile
     container_name: payment-service-api
     ports:
-      - "7004:8080"
+      - "3005:3005"
     environment:
-      ASPNETCORE_ENVIRONMENT: Development
+      DB_HOST: payment-service-db
+      DB_PORT: "5432"
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: payment
+    depends_on:
+      - payment-service-db
+    restart: on-failure
     networks:
       - locacao-net
 
