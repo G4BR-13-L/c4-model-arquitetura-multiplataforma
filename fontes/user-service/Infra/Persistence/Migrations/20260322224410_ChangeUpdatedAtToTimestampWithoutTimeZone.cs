@@ -6,25 +6,25 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace UserService.API.Infra.Persistence.Migrations
 {
     /// <inheritdoc />
-    public partial class ChangeCreatedAtToTimestampWithoutTimeZone : Migration
+    public partial class ChangeUpdatedAtToTimestampWithoutTimeZone : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.AlterColumn<DateTime>(
-                name: "CreatedAt",
+                name: "UpdatedAt",
                 table: "users",
                 type: "timestamp without time zone",
                 nullable: false,
-                oldClrType: typeof(DateTimeOffset),
+                oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone");
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AlterColumn<DateTimeOffset>(
-                name: "CreatedAt",
+            migrationBuilder.AlterColumn<DateTime>(
+                name: "UpdatedAt",
                 table: "users",
                 type: "timestamp with time zone",
                 nullable: false,

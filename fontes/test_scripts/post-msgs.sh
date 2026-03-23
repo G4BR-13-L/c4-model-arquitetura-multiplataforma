@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Se a fila for FIFO, lembre-se do --message-group-id
-QUEUE_URL="http://localhost:4566/000000000000/notification_send_email.fifo"
+QUEUE_URL="http://localhost:4566/000000000000/notification_send_email_fifo"
 
 echo "--- 1. Enviando mensagem CORRETA (Novo Formato) ---"
 # Removi a vírgula extra após o campo content e ajustei o JSON

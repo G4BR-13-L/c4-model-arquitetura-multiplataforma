@@ -1,13 +1,17 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.OpenApi.Models;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Serilog;
+using System;
 using UserService.API.Infra.Auth;
 using UserService.API.Infra.Messaging;
 using UserService.API.Infra.Notifications;
+using UserService.API.Infra.Persistence;
 using UserService.API.Infra.Repositories;
 using UserService.API.Models.KeyCloak;
+using UserService.API.Services;
 
 namespace UserService.API
 {
@@ -28,6 +32,9 @@ namespace UserService.API
                 .ValidateDataAnnotations()
                 .ValidateOnStart();
 
+            builder.Services.AddDbContext<AppDbContext>(options =>
+                    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+
             builder.Services.AddTransient<KeyCloakAdminAuthDelegatingHandler>();
 
             builder.Services.AddHttpClient("KeyCloakAdmin", (sp, client) =>
@@ -46,8 +53,15 @@ namespace UserService.API
 
             builder.Services.AddScoped<IKeyCloakAuthRepository, KeyCloakAuthRepository>();
             builder.Services.AddScoped<IKeyCloakManagementRepository, KeyCloakManagementRepository>();
+            builder.Services.AddScoped<IUserService, UsersService>();
+            builder.Services.AddScoped<IKeyCloakService, KeyCloakService>();
+            builder.Services.AddScoped<IKeyCloakAuthRepository, KeyCloakAuthRepository>();
 
-            builder.Services.AddControllers();
+            builder.Services.AddControllers()
+                .AddJsonOptions(options =>
+                {
+                    options.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
+                });
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen(options =>
             {
@@ -106,12 +120,16 @@ namespace UserService.API
 
             var app = builder.Build();
 
-            if (app.Environment.IsDevelopment())
+            using (var scope = app.Services.CreateScope())
             {
-                app.UseSwagger();
-                app.UseSwaggerUI();
+                var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+                db.Database.Migrate();
             }
 
+            app.UseSwagger();
+            app.UseSwaggerUI();
+
+            app.UseAuthentication();
             app.UseAuthorization();
             app.MapControllers();
             app.Run();

@@ -4,15 +4,19 @@ set -eu
 create_queue() {
   local queue_name="$1"
 
-  if awslocal sqs get-queue-url --queue-name "$queue_name" >/dev/null 2>&1; then
-    echo "Queue '$queue_name' already exists."
-    return
-  fi
+aws configure set aws_access_key_id default_access_key --profile=localstack
+aws configure set aws_secret_access_key default_secret_key --profile=localstack
+aws configure set region $REGION --profile=localstack
 
-  echo "Creating queue '$queue_name'..."
-  awslocal sqs create-queue --queue-name "$queue_name" >/dev/null
-}
+echo "---------- CONFIGURANDO SQS LOCALSTACK ----------"
 
-create_queue "notification.email"
-create_queue "rental.created"
-create_queue "payment.confirmed"
+# Cria a fila FIFO
+awslocal sqs create-queue \
+  --queue-name notification_send_email.fifo \
+  --attributes FifoQueue=true,ContentBasedDeduplication=true
+
+
+# Opcional: Lista para confirmar nos logs do container
+awslocal sqs list-queues
+
+echo "---------- FILAS CRIADAS COM SUCESSO ----------"
