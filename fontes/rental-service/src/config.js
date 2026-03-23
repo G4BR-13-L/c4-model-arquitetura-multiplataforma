@@ -15,8 +15,8 @@ module.exports = {
   keycloakClientSecret: process.env.KEYCLOAK_CLIENT_SECRET ?? "",
   awsRegion: process.env.AWS_REGION ?? "us-east-1",
   sqsEndpoint: process.env.SQS_ENDPOINT ?? "http://localhost:4566",
-  rentalCreatedQueueName: process.env.RENTAL_CREATED_QUEUE_NAME ?? "rental-created",
-  paymentConfirmedQueueName: process.env.PAYMENT_CONFIRMED_QUEUE_NAME ?? "payment-confirmed",
+  rentalCreatedQueueName: process.env.RENTAL_CREATED_QUEUE_NAME ?? "rental_created_fifo",
+  paymentConfirmedQueueName: process.env.PAYMENT_CONFIRMED_QUEUE_NAME ?? "payment_confirmed_fifo",
   paymentEventsEnabled: getBoolean(process.env.PAYMENT_EVENTS_ENABLED, true),
   paymentPollingIntervalMs: Number(process.env.PAYMENT_POLLING_INTERVAL_MS ?? 5000),
   jwksCacheTtlMs: Number(process.env.JWKS_CACHE_TTL_MS ?? 300000)

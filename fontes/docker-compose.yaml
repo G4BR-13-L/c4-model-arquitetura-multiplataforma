@@ -41,6 +41,8 @@ services:
     logging:
       driver: none
     image: localstack/localstack:stable
+    environment:
+      - REGION=us-east-1
     ports:
       - "127.0.0.1:4566:4566"
       - "127.0.0.1:4510-4559:4510-4559"
@@ -144,8 +146,8 @@ services:
       AWS_REGION: us-east-1
       AWS_ACCESS_KEY_ID: test
       AWS_SECRET_ACCESS_KEY: test
-      RENTAL_CREATED_QUEUE_NAME: rental-created
-      PAYMENT_CONFIRMED_QUEUE_NAME: payment-confirmed
+      RENTAL_CREATED_QUEUE_NAME: rental_created_fifo
+      PAYMENT_CONFIRMED_QUEUE_NAME: payment_confirmed_fifo
     volumes:
       - ./rental-service/src:/app/src:delegated
     networks:
