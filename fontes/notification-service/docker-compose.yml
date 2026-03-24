@@ -12,51 +12,55 @@ services:
   # ------------------------
   #  Notification Service Database
   # ------------------------
-  notification_service_postgres:
-    image: postgres:17
-    container_name: notification_service_postgres
+  notification-service-db:
+    image: postgres:alpine
+    container_name: notification-service-db
+    restart: always
     environment:
+      POSTGRES_DB: notification_service
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: notification_service
-    ports:
-      - "5453:5432"
-    volumes:
-      - notification_service_pg_data:/var/lib/postgresql/data
     networks:
       - notification_service_net
-
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
   # ------------------------
   #  LocalStack (SQS)
   # ------------------------
+
   localstack:
-    container_name: localstack_main
-    image: localstack/localstack
+    container_name: localstack
+    # logging: driver: none  <-- Sugiro comentar isso para ver se o script roda!
+    image: localstack/localstack:stable
+    environment:
+      - REGION=us-east-1
+      - LOCALSTACK_ACKNOWLEDGE_ACCOUNT_REQUIREMENT=1 # Adicione esta linha
     ports:
       - "127.0.0.1:4566:4566"
       - "127.0.0.1:4510-4559:4510-4559"
-    environment:
-      - SERVICES=sqs
-      - DEBUG=1
-      - DOCKER_HOST=unix:///var/run/docker.sock
+    networks:
+      - notification_service_net
     volumes:
-      - "./localstack:/var/lib/localstack"
+      - "${TEMPDIR:-/var/lib/localstack}:/var/lib/localstack"
       - "/var/run/docker.sock:/var/run/docker.sock"
-      - "./init-sqs.sh:/etc/localstack/init/ready.d/init-sqs.sh"
-    networks:
-      - notification_service_net
+      - "./init-sqs.sh:/etc/localstack/init/ready.d/setup.sh"
 
-  notification_app:
-    build: .
-    container_name: notification_service_app
-    ports:
-      - "8080:8080"
-    environment:
-      - APP_ENVIRONMENT=dev
-      - DATABASE_URL=postgres://postgres:postgres@notification_service_postgres:5432/notification_service
-      - SQS_ENDPOINT=http://localstack:4566
-    depends_on:
-      - localstack
-      - notification_service_postgres
-    networks:
-      - notification_service_net
+  # notification_app:
+  #   build: .
+  #   container_name: notification_service_app
+  #   ports:
+  #     - "8080:8080"
+  #   environment:
+  #     - APP_ENVIRONMENT=dev
+  #     - DATABASE_URL=postgres://postgres:postgres@notification_service_postgres:5432/notification_service
+  #     - SQS_ENDPOINT=http://localstack:4566
+  #   depends_on:
+  #     - localstack
+  #     - notification_service_postgres
+  #   networks:
+  #     - notification_service_net
