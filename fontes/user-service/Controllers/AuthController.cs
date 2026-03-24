@@ -32,31 +32,6 @@ namespace UserService.API.Controllers
 
             _logger.LogInformation("Token gerado com sucesso para o usuário {Usuario}", command.UserName);
             return Ok(tokenResult);
-        }
-
-        [HttpPost("refresh")]
-        public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenCommand command)
-        {
-            _logger.LogInformation("Iniciando renovação de token");
-            var result = await _keyCloakAuthRepository.RefreshTokenAsync(command.RefreshToken);
-            if (result is null)
-            {
-                _logger.LogWarning("Falha na renovação de token: token inválido ou expirado");
-                return BadRequest(new { Message = "Token inválido ou expirado." });
-            }
-
-            _logger.LogInformation("Token renovado com sucesso");
-            return Ok(result);
-        }
-
-        [Authorize]
-        [HttpPost("logout")]
-        public async Task<IActionResult> Logout([FromBody] LogoutCommand command)
-        {
-            _logger.LogInformation("Iniciando logout do usuário");
-            await _keyCloakAuthRepository.LogoutAsync(command.RefreshToken);
-            _logger.LogInformation("Logout realizado com sucesso");
-            return NoContent();
-        }
+        }        
     }
 }

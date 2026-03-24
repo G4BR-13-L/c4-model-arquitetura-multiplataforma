@@ -5,13 +5,13 @@ using Microsoft.OpenApi.Models;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Serilog;
-using System;
 using UserService.API.Infra.Auth;
 using UserService.API.Infra.Messaging;
 using UserService.API.Infra.Notifications;
 using UserService.API.Infra.Persistence;
 using UserService.API.Infra.Repositories;
 using UserService.API.Models.KeyCloak;
+using FluentValidation;
 using UserService.API.Services;
 
 namespace UserService.API
@@ -20,13 +20,7 @@ namespace UserService.API
     {
         public static void Main(string[] args)
         {
-            var builder = WebApplication.CreateBuilder(args);
-
-            builder.Host.UseSerilog((context, services, configuration) => configuration
-                    .ReadFrom.Configuration(context.Configuration)
-                    .ReadFrom.Services(services)
-                    .Enrich.FromLogContext()
-                    .WriteTo.Console());
+            var builder = WebApplication.CreateBuilder(args);            
 
             builder.Services.AddOptions<KeyCloakSettings>()
                 .BindConfiguration(nameof(KeyCloakSettings))
@@ -57,6 +51,8 @@ namespace UserService.API
             builder.Services.AddScoped<IUserService, UsersService>();
             builder.Services.AddScoped<IKeyCloakService, KeyCloakService>();
             builder.Services.AddScoped<IKeyCloakAuthRepository, KeyCloakAuthRepository>();
+
+            builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 
             builder.Services.AddControllers()
                 .AddJsonOptions(options =>
@@ -115,15 +111,14 @@ namespace UserService.API
 
             builder.Services.AddOpenTelemetry()
             .ConfigureResource(resource => resource
-                .AddService(serviceName: builder.Configuration["OpenTelemetry:ServiceName"] ?? "user-service"))
+                .AddService(serviceName: builder.Configuration["OpenTelemetry:ServiceName"]))
             .WithTracing(tracing => tracing
                 .AddAspNetCoreInstrumentation()
                 .AddHttpClientInstrumentation()
                 .AddEntityFrameworkCoreInstrumentation()
                 .AddOtlpExporter(otlp =>
                 {
-                    otlp.Endpoint = new Uri(builder.Configuration["OpenTelemetry:OtlpEndpoint"] ?? "http://localhost:4318");
-                    otlp.Protocol = OpenTelemetry.Exporter.OtlpExportProtocol.HttpProtobuf;
+                    otlp.Endpoint = new Uri(builder.Configuration["OpenTelemetry:OtlpEndpoint"]);
                 }));
 
             var app = builder.Build();
