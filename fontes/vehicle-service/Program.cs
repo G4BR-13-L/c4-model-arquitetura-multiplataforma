@@ -106,8 +106,6 @@ namespace VehicleService.API
 
                 app.UseSerilogRequestLogging();
 
-                app.UseHttpsRedirection();
-
                 app.UseAuthentication();
                 app.UseAuthorization();
 

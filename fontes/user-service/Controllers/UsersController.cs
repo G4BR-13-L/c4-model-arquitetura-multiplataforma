@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using FluentValidation;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using UserService.API.Models.Commands;
 using UserService.API.Models.Responses;
@@ -11,11 +12,13 @@ namespace UserService.API.Controllers
     public class UsersController : ControllerBase
     {
         private readonly IUserService _userService;
+        private readonly IValidator<CreateUserCommand> _validator;
         private readonly ILogger<UsersController> _logger;
 
-        public UsersController(IUserService userService, ILogger<UsersController> logger)
+        public UsersController(IUserService userService, IValidator<CreateUserCommand> validator, ILogger<UsersController> logger)
         {
             _userService = userService;
+            _validator = validator;
             _logger = logger;
         }
 
@@ -52,11 +55,22 @@ namespace UserService.API.Controllers
             return StatusCode(result.StatusCode, new { Message = result.Message });
         }
 
-        [Authorize]
         [HttpPost]
         public async Task<IActionResult> CreateUserAsync([FromBody]CreateUserCommand request)
         {
             _logger.LogInformation("Iniciando criação de usuário");
+
+            var validation = await _validator.ValidateAsync(request);
+            if (!validation.IsValid)
+            {
+                var errors = validation.Errors
+                    .GroupBy(e => e.PropertyName)
+                    .ToDictionary(g => g.Key, g => g.Select(e => e.ErrorMessage).ToArray());
+
+                _logger.LogWarning("Validação falhou ao criar usuário: {Erros}", errors);
+                return BadRequest(new { Errors = errors });
+            }
+
             var result = await _userService.CreateUserAsync(request);
 
             if (result.Success)

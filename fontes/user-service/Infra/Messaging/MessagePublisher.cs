@@ -46,6 +46,12 @@ namespace UserService.API.Infra.Messaging
                 MessageBody = body
             };
 
+            if (queueName.EndsWith(".fifo", StringComparison.OrdinalIgnoreCase))
+            {
+                request.MessageGroupId = queueName;
+                request.MessageDeduplicationId = Guid.NewGuid().ToString();
+            }
+
             var response = await _sqs.SendMessageAsync(request, cancellationToken);
 
             _logger.LogInformation(
@@ -55,7 +61,7 @@ namespace UserService.API.Infra.Messaging
 
         public async Task PublishToTopicAsync<T>(string topicArn, T message, CancellationToken cancellationToken = default)
         {
-            _logger.LogInformation("Publicando mensagem no tópico SNS {TopicArn}", topicArn);
+            _logger.LogInformation("Publicando mensagem no tï¿½pico SNS {TopicArn}", topicArn);
 
             var body = JsonSerializer.Serialize(message, JsonOptions);
 
@@ -68,7 +74,7 @@ namespace UserService.API.Infra.Messaging
             var response = await _sns.PublishAsync(request, cancellationToken);
 
             _logger.LogInformation(
-                "Mensagem publicada no tópico SNS {TopicArn} com MessageId {MessageId}",
+                "Mensagem publicada no tï¿½pico SNS {TopicArn} com MessageId {MessageId}",
                 topicArn, response.MessageId);
         }
     }
