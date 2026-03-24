@@ -68,11 +68,14 @@ namespace VehicleService.API
                     .AddJwtBearer(options =>
                     {
                         options.Authority = builder.Configuration["Keycloak:Authority"];
-                        options.Audience = builder.Configuration["Keycloak:Audience"];                        
+                        options.Audience = builder.Configuration["Keycloak:Audience"];
                         options.RequireHttpsMetadata = bool.Parse(builder.Configuration["Keycloak:RequireHttpsMetadata"] ?? "true");
                         options.TokenValidationParameters = new TokenValidationParameters()
                         {
-                            ValidateIssuer = false
+                            ValidateIssuer = false,
+                            ValidAudiences = [
+                                builder.Configuration["Keycloak:Audience"]
+                            ]
                         };
                     });
 

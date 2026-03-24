@@ -99,7 +99,10 @@ namespace UserService.API
                     options.RequireHttpsMetadata = bool.Parse(builder.Configuration["Keycloak:RequireHttpsMetadata"] ?? "true");
                     options.TokenValidationParameters = new TokenValidationParameters()
                     {
-                        ValidateIssuer = false
+                        ValidateIssuer = false,
+                        ValidAudiences = [ 
+                            builder.Configuration["Keycloak:Audience"]
+                        ]
                     };
                 });
 
