@@ -42,6 +42,7 @@ services:
     image: localstack/localstack:stable
     environment:
       - REGION=us-east-1
+      - LOCALSTACK_ACKNOWLEDGE_ACCOUNT_REQUIREMENT=1
     ports:
       - "127.0.0.1:4566:4566"
       - "127.0.0.1:4510-4559:4510-4559"
