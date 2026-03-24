@@ -2,6 +2,8 @@
 FROM lukemathwalker/cargo-chef:latest-rust-1.89 AS chef
 WORKDIR /app
 
+COPY scripts/entrypoint.sh /scripts/entrypoint.sh
+RUN chmod +x /scripts/entrypoint.sh
 
 # 2. Planejamento (Planner)
 FROM chef AS planner

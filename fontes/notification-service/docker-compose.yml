@@ -65,6 +65,5 @@ services:
         condition: service_healthy
       localstack:
         condition: service_started
-    entrypoint: ["./scripts/entrypoint.sh"]
     networks:
       - notification_service_net
