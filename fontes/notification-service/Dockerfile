@@ -2,36 +2,39 @@ FROM lukemathwalker/cargo-chef:latest-rust-1.88 AS chef
 WORKDIR /app
 
 FROM chef AS planner
-# Copia apenas o que é estritamente necessário para a receita
+# Copia o que é necessário para calcular a "receita" de dependências
 COPY Cargo.toml Cargo.lock ./
 COPY src ./src/ 
-# Se tiver outros folders de crates (workspace), copie-os aqui
 RUN cargo chef prepare --recipe-path recipe.json
 
 FROM chef AS builder
+# 1. Copia a receita gerada no estágio anterior
 COPY --from=planner /app/recipe.json recipe.json
-# Cache das dependências
-RUN --mount=type=cache,target=/usr/local/cargo/registry \
-    --mount=type=cache,target=/app/target \
-    cargo chef cook --release --recipe-path recipe.json
 
+# 2. Constrói apenas as dependências (isso será cacheado em uma camada do Docker)
+# Removido os --mounts que exigiam BuildKit
+RUN cargo chef cook --release --recipe-path recipe.json
+
+# 3. Agora copiamos o código fonte real
 COPY . .
 ENV SQLX_OFFLINE=true
-# Build da aplicação usando cache do target
-RUN --mount=type=cache,target=/usr/local/cargo/registry \
-    --mount=type=cache,target=/app/target \
-    cargo build --release && \
-    cp target/release/notification-service /app/notification-service
+
+# 4. Build da aplicação 
+# O binário será gerado na pasta target/release padrão
+RUN cargo build --release
 
 FROM debian:bookworm-slim AS runtime
 WORKDIR /app
-# Instala apenas o necessário para rodar
+
+# Instala bibliotecas dinâmicas necessárias
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     libssl3 \
     && rm -rf /var/lib/apt/lists/*
 
-COPY --from=builder /app/notification-service /app/notification-service
+# Copia o binário final e as configs
+# Ajuste o caminho de origem se o nome do seu binário no Cargo.toml for diferente
+COPY --from=builder /app/target/release/notification-service /app/notification-service
 COPY --from=builder /app/config /app/config
 
 ENV APP_ENVIRONMENT=dev
