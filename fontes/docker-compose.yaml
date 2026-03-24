@@ -38,8 +38,7 @@ services:
   # ── Localstack ───────────────────────────────────────────────────
   localstack:
     container_name: localstack
-    logging:
-      driver: none
+    # logging: driver: none  <-- Sugiro comentar isso para ver se o script roda!
     image: localstack/localstack:stable
     environment:
       - REGION=us-east-1
@@ -51,7 +50,8 @@ services:
     volumes:
       - "${TEMPDIR:-/var/lib/localstack}:/var/lib/localstack"
       - "/var/run/docker.sock:/var/run/docker.sock"
-      - ./.docker/entrypoint-localstack.sh:/docker-entrypoint-initaws.d/setup.sh
+      # O CAMINHO CORRETO É ESTE:
+      - ./.docker/entrypoint-localstack.sh:/etc/localstack/init/ready.d/setup.sh
 
   # ── Jaeger ───────────────────────────────────────────────────────
   jaeger:

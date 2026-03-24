@@ -67,9 +67,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     sqlx::migrate!("./migrations").run(&pool).await?;
 
     let sqs_client = create_sqs_client().await;
-    let queue_url =
-        "http://sqs.us-east-1.localhost.localstack.cloud:4566/000000000000/notification_send_email_fifo"
-            .to_string();
+    let queue_url = "http://localstack:4566/000000000000/notification_send_email.fifo".to_string();
 
     let email_service = EmailService::new(pool.clone());
     let email_error_service = EmailErrorService::new(pool.clone());
