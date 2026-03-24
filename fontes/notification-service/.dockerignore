@@ -1,0 +1,6 @@
+# .dockerignore
+target/
+localstack/
+.git/
+*.db
+*.log
