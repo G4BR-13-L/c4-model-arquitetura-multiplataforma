@@ -15,19 +15,31 @@ pub async fn start_consumer(
     info!("Iniciando consumidor SQS em: {}", queue_url);
 
     loop {
-        let rcv_output = client
+        let rcv_result = client
             .receive_message()
             .queue_url(&queue_url)
             .max_number_of_messages(10)
             .wait_time_seconds(20)
             .send()
-            .await?;
+            .await;
+
+        let rcv_output = match rcv_result {
+            Ok(output) => output,
+            Err(e) => {
+                error!(
+                    "Erro ao receber mensagens do SQS (LocalStack offline?): {}. Tentando novamente em 5s...",
+                    e
+                );
+                tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+                continue;
+            }
+        };
 
         if let Some(messages) = rcv_output.messages {
             for message in messages {
                 let body = message.body().unwrap_or("");
+                info!("DEBUG: Payload recebido do SQS: {}", body); // Adicione esta linha
 
-                // 1. Tenta deserializar e validar
                 match serde_json::from_str::<SQSEmailMessage>(body) {
                     Ok(mut sqs_email_message_data) => {
                         // Atribui o JSON original para auditoria conforme sua struct

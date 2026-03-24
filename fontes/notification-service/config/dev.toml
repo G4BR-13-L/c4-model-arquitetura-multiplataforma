@@ -1,6 +1,6 @@
-# Configurações para desenvolvimento local
-database_url = "postgres://postgres:postgres@localhost:5453/notification_service"
+database_url = "postgres://postgres:postgres@localhost:5432/notification_service"
+sqs_endpoint_url = "http://localhost:4566"
+queue_url = "http://localhost:4566/000000000000/notification_send_email.fifo"
 jwt_secret = "0aa59f4d8621d8e18db9f037618afd0443433f25fdcfd8d77aee276a37e3a6ac"
-
 show_time_tracing_logs = true
-time_tracing_logs_with_ansi = true
+time_tracing_logs_with_ansi = false

@@ -7,7 +7,7 @@ use crate::domain::value_objects::{email_field::EmailField, name_field::NameFiel
 
 #[derive(Debug, Clone, FromRow, Default, Serialize, Deserialize)]
 pub struct Email {
-    #[serde(default)]
+    #[serde(default = "Uuid::new_v4")]
     #[sqlx(default)]
     pub id: Uuid,
 
