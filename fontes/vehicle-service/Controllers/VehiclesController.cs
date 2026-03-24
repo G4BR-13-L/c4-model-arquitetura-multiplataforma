@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using System.Text.Json;
@@ -69,6 +70,7 @@ namespace VehicleService.API.Controllers
             return Ok(vehicle);
         }
 
+        [Authorize]
         [HttpPost("{id}/reservation")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -106,6 +108,7 @@ namespace VehicleService.API.Controllers
             return NoContent();
         }
 
+        [Authorize]
         [HttpPut("{id}/return")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]

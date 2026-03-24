@@ -69,7 +69,7 @@ namespace VehicleService.API.Infra.Data.Migrations
                         .HasColumnName("category_id");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
+                        .HasColumnType("timestamp without time zone")
                         .HasColumnName("created_at");
 
                     b.Property<decimal>("DailyPrice")
@@ -90,7 +90,7 @@ namespace VehicleService.API.Infra.Data.Migrations
                         .HasColumnName("model");
 
                     b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
+                        .HasColumnType("timestamp without time zone")
                         .HasColumnName("updated_at");
 
                     b.HasKey("Id");
