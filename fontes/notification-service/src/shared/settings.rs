@@ -10,6 +10,8 @@ pub struct DatabaseConfig {
 pub struct Settings {
     pub database_url: String,
     pub jwt_secret: String,
+    pub sqs_endpoint_url: String, // Ex: http://localhost:4566
+    pub queue_url: String,        // Ex: http://localhost:4566/000.../fila.fifo
     pub show_time_tracing_logs: bool,
     pub time_tracing_logs_with_ansi: bool,
 }
@@ -21,9 +23,7 @@ impl Settings {
         let s = Config::builder()
             .add_source(File::with_name("config/default"))
             .add_source(File::with_name(&format!("config/{run_mode}")).required(false))
-            .add_source(
-                Environment::default().convert_case(config::Case::Snake),
-            )
+            .add_source(Environment::default().convert_case(config::Case::Snake))
             .build()?;
 
         s.try_deserialize()

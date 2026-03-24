@@ -60,15 +60,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     info!("Strating notification service Job Search...");
 
-    let database_url = settings.database_url.clone();
+    let pool = create_pool(&settings.database_url).await?;
 
-    let pool = create_pool(&database_url).await?;
+    let queue_url = settings.queue_url.clone();
 
-    sqlx::migrate!("./migrations").run(&pool).await?;
+    let args: Vec<String> = std::env::args().collect();
+    if args.contains(&"--migrate-only".to_string()) {
+        info!("Rodando migrations e encerrando...");
+        sqlx::migrate!("./migrations").run(&pool).await?;
+        return Ok(());
+    }
 
-    let sqs_client = create_sqs_client().await;
-    let queue_url = "http://localstack:4566/000000000000/notification_send_email.fifo".to_string();
-
+    let sqs_client = create_sqs_client(&settings.sqs_endpoint_url).await;
     let email_service = EmailService::new(pool.clone());
     let email_error_service = EmailErrorService::new(pool.clone());
 
