@@ -7,7 +7,7 @@ use sqlx::{
     postgres::PgTypeInfo,
 };
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Default)]
 #[serde(transparent)]
 pub struct NameField(String);
 
@@ -26,6 +26,16 @@ impl NameField {
 
     pub fn as_str(&self) -> &str {
         &self.0
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for NameField {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        Self::new(s).map_err(serde::de::Error::custom)
     }
 }
 

@@ -72,17 +72,28 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let email_service = EmailService::new(pool.clone());
     let email_error_service = EmailErrorService::new(pool.clone());
 
-    // Roda o consumidor em uma Task do Tokio (Background)
     tokio::spawn(async move {
-        if let Err(e) = infrastructure::worker::start_consumer(
-            sqs_client,
-            queue_url,
-            email_service,
-            email_error_service,
-        )
-        .await
-        {
-            error!("Worker parou: {:?}", e);
+        info!("Aguardando filas do LocalStack estarem prontas...");
+
+        loop {
+            // Criamos um escopo temporário com { ... }
+            // Tudo o que for criado aqui dentro morre no fim da chave
+            {
+                let result = infrastructure::worker::start_consumer(
+                    sqs_client.clone(),
+                    queue_url.clone(),
+                    email_service.clone(),
+                    email_error_service.clone(),
+                )
+                .await;
+
+                if let Err(ref e) = result {
+                    error!("Worker parou: {:?}. Tentando novamente em 5s...", e);
+                }
+            } // <--- 'result' e 'e' são destruídos aqui automaticamente!
+
+            // Agora o .await do sleep está 100% limpo de referências non-Send
+            tokio::time::sleep(std::time::Duration::from_secs(5)).await;
         }
     });
 

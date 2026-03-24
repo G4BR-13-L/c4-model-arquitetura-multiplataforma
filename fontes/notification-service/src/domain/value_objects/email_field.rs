@@ -7,7 +7,7 @@ use sqlx::{
     postgres::PgTypeInfo,
 };
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Default)]
 #[serde(transparent)]
 pub struct EmailField(String);
 
@@ -29,12 +29,21 @@ impl EmailField {
     }
 }
 
+impl<'de> serde::Deserialize<'de> for EmailField {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        Self::new(s).map_err(serde::de::Error::custom)
+    }
+}
+
 impl fmt::Display for EmailField {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.0.fmt(f)
     }
 }
-
 
 impl Type<Postgres> for EmailField {
     fn type_info() -> PgTypeInfo {

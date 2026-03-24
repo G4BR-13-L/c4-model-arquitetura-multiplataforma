@@ -17,6 +17,7 @@ pub struct SQSEmailMessage {
 
     pub occurred_at: DateTime<Utc>,
 
+    #[serde(flatten)]
     pub data: Email,
 }
 

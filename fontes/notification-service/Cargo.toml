@@ -41,10 +41,11 @@ unicode-normalization = "0.1.25"
 uuid = { version = "1.20.0", features = ["v4", "serde"] }
 
 [profile.release]
-opt-level = 3          # Otimização máxima
-lto = true             # Link Time Optimization (binário menor e mais rápido)
-codegen-units = 1      # Melhora a otimização, mas aumenta o tempo de compilação
-panic = 'abort'        # Remove o overhead de stack unwinding
+opt-level = 1           # Mantém alguma performance, mas compila muito mais rápido que o nível 3
+lto = "off"             # O "Link Time Optimization" é o maior vilão do tempo de build; desligue-o
+codegen-units = 16      # Aumentar para 16 ou mais permite compilar em paralelo (usa mais núcleos da CPU)
+panic = 'abort'         # Mantém o binário leve e evita overhead
+incremental = true      # Essencial para que pequenas mudanças no código não refaçam o binário do zero
 
 [lints.clippy]
 pedantic = "deny"

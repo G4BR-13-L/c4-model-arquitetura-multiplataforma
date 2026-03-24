@@ -4,6 +4,7 @@ use uuid::Uuid;
 
 use crate::{domain::email::Email, infrastructure::repository::email_repository::EmailRepository};
 
+#[derive(Clone)]
 pub struct EmailService {
     repo: EmailRepository,
 }

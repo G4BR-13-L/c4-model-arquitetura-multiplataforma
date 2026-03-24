@@ -90,7 +90,7 @@ services:
     ports:
       - "7001:8080"
     environment:
-      ASPNETCORE_ENVIRONMENT: Production      
+      ASPNETCORE_ENVIRONMENT: Production
     depends_on:
       - user-service-db
       - keycloak
@@ -222,7 +222,7 @@ services:
       notification-service-db:
         condition: service_healthy
       localstack:
-        condition: service_started
+        condition: service_healthy
     networks:
       - locacao-net
 
