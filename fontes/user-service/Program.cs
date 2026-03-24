@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
@@ -96,6 +97,10 @@ namespace UserService.API
                     options.Authority = builder.Configuration["Keycloak:Authority"];
                     options.Audience = builder.Configuration["Keycloak:Audience"];
                     options.RequireHttpsMetadata = bool.Parse(builder.Configuration["Keycloak:RequireHttpsMetadata"] ?? "true");
+                    options.TokenValidationParameters = new TokenValidationParameters()
+                    {
+                        ValidateIssuer = false
+                    };
                 });
 
             builder.Services.AddAuthorization();

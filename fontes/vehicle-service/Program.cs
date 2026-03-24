@@ -1,5 +1,6 @@
 
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
@@ -67,8 +68,12 @@ namespace VehicleService.API
                     .AddJwtBearer(options =>
                     {
                         options.Authority = builder.Configuration["Keycloak:Authority"];
-                        options.Audience = builder.Configuration["Keycloak:Audience"];
+                        options.Audience = builder.Configuration["Keycloak:Audience"];                        
                         options.RequireHttpsMetadata = bool.Parse(builder.Configuration["Keycloak:RequireHttpsMetadata"] ?? "true");
+                        options.TokenValidationParameters = new TokenValidationParameters()
+                        {
+                            ValidateIssuer = false
+                        };
                     });
 
                 builder.Services.AddAuthorization();
@@ -125,7 +130,7 @@ namespace VehicleService.API
             }
             catch (Exception ex)
             {
-                Log.Fatal(ex, "A aplicação encerrou inesperadamente.");
+                Log.Fatal(ex, "A aplicaï¿½ï¿½o encerrou inesperadamente.");
             }
             finally
             {
