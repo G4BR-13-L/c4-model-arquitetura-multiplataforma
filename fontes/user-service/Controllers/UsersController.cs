@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using UserService.API.Models.Commands;
 using UserService.API.Models.Responses;
 using UserService.API.Services;
@@ -18,6 +19,7 @@ namespace UserService.API.Controllers
             _logger = logger;
         }
 
+        [Authorize]
         [HttpGet]
         public async Task<IActionResult> GetAllUsersAsync()
         {
@@ -27,6 +29,7 @@ namespace UserService.API.Controllers
             return Ok(result.Data);
         }
 
+        [Authorize]
         [HttpGet("{id}")]
         public async Task<IActionResult> GetUserByIdAsync(Guid id)
         {
@@ -49,6 +52,7 @@ namespace UserService.API.Controllers
             return StatusCode(result.StatusCode, new { Message = result.Message });
         }
 
+        [Authorize]
         [HttpPost]
         public async Task<IActionResult> CreateUserAsync([FromBody]CreateUserCommand request)
         {

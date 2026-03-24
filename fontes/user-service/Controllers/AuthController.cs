@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using UserService.API.Infra.Repositories;
 using UserService.API.Models;
@@ -48,6 +49,7 @@ namespace UserService.API.Controllers
             return Ok(result);
         }
 
+        [Authorize]
         [HttpPost("logout")]
         public async Task<IActionResult> Logout([FromBody] LogoutCommand command)
         {
