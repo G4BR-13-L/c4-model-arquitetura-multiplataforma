@@ -46,6 +46,12 @@ namespace VehicleService.API.Infra.Messaging
                 MessageBody = body
             };
 
+            if (queueName.EndsWith(".fifo", StringComparison.OrdinalIgnoreCase))
+            {
+                request.MessageGroupId = queueName;
+                request.MessageDeduplicationId = Guid.NewGuid().ToString();
+            }
+
             var response = await _sqs.SendMessageAsync(request, cancellationToken);
 
             _logger.LogInformation(

@@ -44,10 +44,12 @@ namespace VehicleService.API.Data.Configurations
 
             builder.Property(v => v.CreatedAt)
                 .HasColumnName("created_at")
+                .HasColumnType("timestamp without time zone")
                 .IsRequired();
 
             builder.Property(v => v.UpdatedAt)
                 .HasColumnName("updated_at")
+                .HasColumnType("timestamp without time zone")
                 .IsRequired();
 
             builder.HasOne(v => v.Category)

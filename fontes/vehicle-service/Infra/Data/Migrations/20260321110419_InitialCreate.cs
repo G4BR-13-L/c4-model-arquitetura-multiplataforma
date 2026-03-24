@@ -36,8 +36,8 @@ namespace VehicleService.API.Infra.Data.Migrations
                     category_id = table.Column<Guid>(type: "uuid", nullable: false),
                     available = table.Column<bool>(type: "boolean", nullable: false),
                     daily_price = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false),
-                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                    created_at = table.Column<DateTime>(type: "timestamp without time zone", nullable: false),
+                    updated_at = table.Column<DateTime>(type: "timestamp without time zone", nullable: false)
                 },
                 constraints: table =>
                 {

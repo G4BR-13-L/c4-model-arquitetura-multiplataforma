@@ -40,7 +40,7 @@ namespace VehicleService.API.Infra.Data
                 }
             };
 
-            var now = DateTime.UtcNow;
+            var now = DateTime.Now;
 
             var vehicles = new List<Vehicle>
             {
