@@ -10,7 +10,7 @@ using VehicleService.API.Models.DTOs;
 namespace VehicleService.API.Controllers
 {
     [ApiController]
-    [Route("vehicles")]
+    [Route("v1/vehicles")]
     public sealed class VehiclesController : ControllerBase
     {
         private readonly AppDbContext _context;

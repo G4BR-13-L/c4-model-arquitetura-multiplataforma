@@ -6,7 +6,7 @@ using VehicleService.API.Models.DTOs;
 namespace VehicleService.API.Controllers
 {
     [ApiController]
-    [Route("categories")]
+    [Route("v1/categories")]
     public sealed class CategoriesController : ControllerBase
     {
         private readonly AppDbContext _context;

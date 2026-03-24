@@ -424,6 +424,7 @@
     "username" : "admin",
     "emailVerified" : false,
     "attributes" : {
+      "userId" : [ "1234567890" ],
       "is_temporary_admin" : [ "true" ]
     },
     "enabled" : true,
@@ -471,7 +472,10 @@
     "requiredActions" : [ ],
     "realmRoles" : [ "default-roles-master" ],
     "clientRoles" : {
-      "rental-service-api" : [ "uma_protection" ]
+      "vehicle-service-api" : [ "uma_protection" ],
+      "payment-service-api" : [ "uma_protection" ],
+      "rental-service-api" : [ "uma_protection" ],
+      "user-service-api" : [ "uma_protection" ]
     },
     "notBefore" : 0,
     "groups" : [ ]
@@ -1622,7 +1626,7 @@
       "subType" : "anonymous",
       "subComponents" : { },
       "config" : {
-        "allowed-protocol-mapper-types" : [ "saml-user-attribute-mapper", "oidc-sha256-pairwise-sub-mapper", "saml-user-property-mapper", "oidc-full-name-mapper", "saml-role-list-mapper", "oidc-usermodel-attribute-mapper", "oidc-address-mapper", "oidc-usermodel-property-mapper" ]
+        "allowed-protocol-mapper-types" : [ "oidc-full-name-mapper", "saml-role-list-mapper", "saml-user-property-mapper", "oidc-usermodel-attribute-mapper", "oidc-address-mapper", "oidc-sha256-pairwise-sub-mapper", "saml-user-attribute-mapper", "oidc-usermodel-property-mapper" ]
       }
     }, {
       "id" : "b9503e32-5044-4647-b553-edf9b7ea067e",
@@ -1647,7 +1651,7 @@
       "subType" : "authenticated",
       "subComponents" : { },
       "config" : {
-        "allowed-protocol-mapper-types" : [ "oidc-usermodel-property-mapper", "saml-role-list-mapper", "oidc-sha256-pairwise-sub-mapper", "saml-user-property-mapper", "oidc-usermodel-attribute-mapper", "oidc-full-name-mapper", "saml-user-attribute-mapper", "oidc-address-mapper" ]
+        "allowed-protocol-mapper-types" : [ "oidc-sha256-pairwise-sub-mapper", "oidc-usermodel-attribute-mapper", "oidc-address-mapper", "saml-role-list-mapper", "oidc-full-name-mapper", "saml-user-property-mapper", "saml-user-attribute-mapper", "oidc-usermodel-property-mapper" ]
       }
     }, {
       "id" : "7360516a-97e9-4eca-ad05-9d0095643694",
