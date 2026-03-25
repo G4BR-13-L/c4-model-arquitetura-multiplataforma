@@ -20,6 +20,14 @@ class KeycloakClient {
     this.serviceTokenExpiresAt = 0;
   }
 
+  getAllowedClientIds() {
+    const configured = Array.isArray(this.config.keycloakAllowedClientIds)
+      ? this.config.keycloakAllowedClientIds
+      : [];
+    const base = this.config.keycloakClientId ? [this.config.keycloakClientId] : [];
+    return [...new Set([...configured, ...base])].filter(Boolean);
+  }
+
   async authenticate(req) {
     const authHeader = req.headers.authorization;
 
@@ -125,13 +133,15 @@ class KeycloakClient {
       throw error;
     }
 
-    if (!this.config.keycloakClientId) {
+    const allowedClientIds = this.getAllowedClientIds();
+
+    if (!allowedClientIds.length) {
       return;
     }
 
     const audiences = Array.isArray(claims.aud) ? claims.aud : [claims.aud].filter(Boolean);
-    const matchesAudience = audiences.includes(this.config.keycloakClientId);
-    const matchesAuthorizedParty = claims.azp === this.config.keycloakClientId;
+    const matchesAudience = audiences.some((aud) => allowedClientIds.includes(aud));
+    const matchesAuthorizedParty = allowedClientIds.includes(claims.azp);
 
     if (!matchesAudience && !matchesAuthorizedParty) {
       const error = new Error("Token audience is not allowed.");

@@ -2,6 +2,7 @@ const {
   CreateQueueCommand,
   GetQueueUrlCommand
 } = require("@aws-sdk/client-sqs");
+const { URL } = require("node:url");
 
 function isQueueDoesNotExistError(error) {
   if (!error) {
@@ -18,12 +19,31 @@ function isQueueDoesNotExistError(error) {
   return /specified queue does not exist/i.test(message);
 }
 
-async function getQueueUrlOrCreate(sqsClient, queueName, logger) {
+function normalizeQueueUrl(queueUrl, endpointUrl) {
+  if (!queueUrl || !endpointUrl) {
+    return queueUrl;
+  }
+
+  try {
+    const parsedQueueUrl = new URL(queueUrl);
+    const parsedEndpointUrl = new URL(endpointUrl);
+
+    parsedQueueUrl.protocol = parsedEndpointUrl.protocol;
+    parsedQueueUrl.hostname = parsedEndpointUrl.hostname;
+    parsedQueueUrl.port = parsedEndpointUrl.port;
+
+    return parsedQueueUrl.toString();
+  } catch (error) {
+    return queueUrl;
+  }
+}
+
+async function getQueueUrlOrCreate(sqsClient, queueName, logger, endpointUrl) {
   try {
     const response = await sqsClient.send(new GetQueueUrlCommand({
       QueueName: queueName
     }));
-    return response.QueueUrl;
+    return normalizeQueueUrl(response.QueueUrl, endpointUrl);
   } catch (error) {
     if (!isQueueDoesNotExistError(error)) {
       throw error;
@@ -39,7 +59,7 @@ async function getQueueUrlOrCreate(sqsClient, queueName, logger) {
       });
     }
 
-    return response.QueueUrl;
+    return normalizeQueueUrl(response.QueueUrl, endpointUrl);
   }
 }
 

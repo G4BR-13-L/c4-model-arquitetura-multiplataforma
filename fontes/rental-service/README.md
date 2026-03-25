@@ -34,3 +34,46 @@ Compatibilidade legada:
 npm install
 npm start
 ```
+
+## Testes E2E
+
+A suíte end-to-end valida o `rental-service` junto ao `user-service`, `vehicle-service`,
+`payment-service` e ao LocalStack/SQS. Ela só funciona com o `docker compose` em execução,
+pois precisa dos outros microsserviços e das filas.
+
+O comando é `npm run test:e2e` e tolera a definição das URLs via variáveis de ambiente para
+acomodar ambientes diferentes:
+
+- `RENTAL_SERVICE_URL` (padrao `http://localhost:7003`)
+- `USER_SERVICE_URL` (padrao `http://localhost:7001`)
+- `VEHICLE_SERVICE_URL` (padrao `http://localhost:7002`)
+- `PAYMENT_SERVICE_URL` (padrao `http://localhost:3005`)
+- `SQS_ENDPOINT` (padrao `http://localhost:4566`)
+- `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` seguem os valores do LocalStack (`us-east-1` / `test`)
+
+### Executando a partir da máquina host
+
+```bash
+RENTAL_SERVICE_URL=http://localhost:7003 \
+USER_SERVICE_URL=http://localhost:7001 \
+VEHICLE_SERVICE_URL=http://localhost:7002 \
+PAYMENT_SERVICE_URL=http://localhost:3005 \
+SQS_ENDPOINT=http://localhost:4566 \
+npm run test:e2e
+```
+
+### Executando dentro do contêiner (mesma rede Docker)
+
+```bash
+docker compose exec rental-service-api sh -c '
+  RENTAL_SERVICE_URL=http://localhost:8080 \
+  USER_SERVICE_URL=http://user-service-api:8080 \
+  VEHICLE_SERVICE_URL=http://vehicle-service-api:8080 \
+  PAYMENT_SERVICE_URL=http://payment-service-api:3005 \
+  SQS_ENDPOINT=http://localstack:4566 \
+  npm run test:e2e
+'
+```
+
+A suíte cria usuários temporários, inicia locações, consome e publica eventos no SQS e
+confirma que o estado final está alinhado com o contrato.

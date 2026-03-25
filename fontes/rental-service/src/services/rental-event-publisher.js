@@ -8,6 +8,7 @@ const { getQueueUrlOrCreate } = require("./sqs-helper");
 class RentalEventPublisher {
   constructor(config, logger) {
     this.logger = logger;
+    this.config = config;
     this.queueName = config.rentalCreatedQueueName;
     this.queueUrl = null;
     this.sqsClient = new SQSClient({
@@ -61,7 +62,8 @@ class RentalEventPublisher {
     this.queueUrl = await getQueueUrlOrCreate(
       this.sqsClient,
       this.queueName,
-      this.logger
+      this.logger,
+      this.config.sqsEndpoint
     );
 
     return this.queueUrl;

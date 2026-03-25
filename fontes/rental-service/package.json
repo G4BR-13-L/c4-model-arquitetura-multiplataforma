@@ -6,7 +6,8 @@
   "type": "commonjs",
   "scripts": {
     "start": "node src/server.js",
-    "check": "node --check src/server.js"
+    "check": "node --check src/server.js",
+    "test:e2e": "node --test test/e2e/rental-service.e2e.test.js"
   },
   "dependencies": {
     "@aws-sdk/client-sqs": "^3.883.0"
