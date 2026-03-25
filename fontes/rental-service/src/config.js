@@ -6,6 +6,14 @@ function getBoolean(value, defaultValue) {
   return String(value).toLowerCase() === "true";
 }
 
+function parseList(value) {
+  if (!value) {
+    return [];
+  }
+
+  return value.split(",").map((item) => item.trim()).filter(Boolean);
+}
+
 module.exports = {
   port: Number(process.env.PORT ?? 8080),
   nodeEnv: process.env.NODE_ENV ?? "development",
@@ -13,6 +21,7 @@ module.exports = {
   keycloakAuthority: process.env.KEYCLOAK_AUTHORITY ?? "http://localhost:7000/realms/master",
   keycloakClientId: process.env.KEYCLOAK_CLIENT_ID ?? "",
   keycloakClientSecret: process.env.KEYCLOAK_CLIENT_SECRET ?? "",
+  keycloakAllowedClientIds: parseList(process.env.KEYCLOAK_ALLOWED_CLIENT_IDS),
   awsRegion: process.env.AWS_REGION ?? "us-east-1",
   sqsEndpoint: process.env.SQS_ENDPOINT ?? "http://localhost:4566",
   rentalCreatedQueueName: process.env.RENTAL_CREATED_QUEUE_NAME ?? "rental_created_fifo",

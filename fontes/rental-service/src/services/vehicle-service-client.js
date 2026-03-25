@@ -2,10 +2,11 @@ class VehicleServiceClient {
   constructor(baseUrl, keycloakClient) {
     this.baseUrl = baseUrl.replace(/\/$/, "");
     this.keycloakClient = keycloakClient;
+    this.vehiclesPath = `${this.baseUrl}/v1/vehicles`;
   }
 
   async getVehicle(vehicleId) {
-    const response = await fetch(`${this.baseUrl}/vehicles/${vehicleId}`);
+    const response = await fetch(`${this.vehiclesPath}/${vehicleId}`);
 
     if (response.status === 404) {
       return null;
@@ -20,7 +21,7 @@ class VehicleServiceClient {
 
   async reserveVehicle(vehicleId, userToken) {
     const token = userToken ?? await this.keycloakClient.getServiceAccessToken();
-    const response = await fetch(`${this.baseUrl}/vehicles/${vehicleId}/reservation`, {
+    const response = await fetch(`${this.vehiclesPath}/${vehicleId}/reservation`, {
       method: "POST",
       headers: this.createAuthHeaders(token)
     });
@@ -43,7 +44,7 @@ class VehicleServiceClient {
 
   async returnVehicle(vehicleId) {
     const token = await this.keycloakClient.getServiceAccessToken();
-    const response = await fetch(`${this.baseUrl}/vehicles/${vehicleId}/return`, {
+    const response = await fetch(`${this.vehiclesPath}/${vehicleId}/return`, {
       method: "PUT",
       headers: this.createAuthHeaders(token)
     });

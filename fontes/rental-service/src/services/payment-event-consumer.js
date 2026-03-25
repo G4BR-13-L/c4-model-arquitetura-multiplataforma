@@ -116,7 +116,8 @@ class PaymentEventConsumer {
     this.queueUrl = await getQueueUrlOrCreate(
       this.sqsClient,
       this.config.paymentConfirmedQueueName,
-      this.logger
+      this.logger,
+      this.config.sqsEndpoint
     );
 
     return this.queueUrl;

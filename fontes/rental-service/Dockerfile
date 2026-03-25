@@ -6,6 +6,7 @@ COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
 
 COPY src ./src
+COPY test ./test
 COPY README.md ./README.md
 
 ENV NODE_ENV=production
