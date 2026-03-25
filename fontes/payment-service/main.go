@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -11,6 +12,10 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/service/sqs"
 	"github.com/google/uuid"
 	_ "github.com/lib/pq"
 )
@@ -93,6 +98,8 @@ func (dto CreatePaymentDTO) Validate() error {
 var logger = slog.New(slog.NewJSONHandler(os.Stdout, nil))
 
 var db *sql.DB
+var sqsClient *sqs.Client
+var paymentConfirmedQueueURL *string
 
 func connectDB() *sql.DB {
 	dsn := fmt.Sprintf(
@@ -130,6 +137,24 @@ type PaginatedResponse struct {
 	Page  int       `json:"page"`
 	Size  int       `json:"size"`
 	Total int       `json:"total"`
+}
+
+type Rental struct {
+	ID            string    `json:"id"`
+	VehicleID     string    `json:"vehicle_id"`
+	UserID        string    `json:"user_id"`
+	StartDate     time.Time `json:"start_date"`
+	EndDate       time.Time `json:"end_date"`
+	TotalAmount   float64   `json:"total_amount"`
+	PaymentStatus string    `json:"payment_status"`
+	Status        string    `json:"status"`
+}
+
+type RentalPaginatedResponse struct {
+	Data  []Rental `json:"data"`
+	Page  int      `json:"page"`
+	Size  int      `json:"size"`
+	Total int      `json:"total"`
 }
 
 func listPaymentsHandler(w http.ResponseWriter, r *http.Request) {
@@ -213,6 +238,20 @@ func createPaymentHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var exists bool
+	if err := db.QueryRow(`SELECT EXISTS(SELECT 1 FROM rentals WHERE id = $1)`, dto.RentalID).Scan(&exists); err != nil {
+		respondInternalError(w, "001I005", err)
+		return
+	}
+	if !exists {
+		respondError(w, http.StatusUnprocessableEntity, "001C005",
+			"rental_id not found",
+			"Locação não encontrada, verifique o ID e tente novamente",
+			fmt.Errorf("rental %s not found", dto.RentalID),
+		)
+		return
+	}
+
 	payment := Payment{
 		ID:            uuid.NewString(),
 		RentalID:      dto.RentalID,
@@ -234,14 +273,200 @@ func createPaymentHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	type paymentConfirmedData struct {
+		PaymentID string `json:"payment_id"`
+		RentalID  string `json:"rental_id"`
+		Status    string `json:"status"`
+	}
+	type paymentConfirmedEvent struct {
+		EventType  string              `json:"event_type"`
+		OccurredAt string              `json:"occurred_at"`
+		Data       paymentConfirmedData `json:"data"`
+	}
+	eventBody, _ := json.Marshal(paymentConfirmedEvent{
+		EventType:  "payment.confirmed",
+		OccurredAt: time.Now().UTC().Format(time.RFC3339),
+		Data: paymentConfirmedData{
+			PaymentID: payment.ID,
+			RentalID:  payment.RentalID,
+			Status:    "CONFIRMED",
+		},
+	})
+	_, sqsErr := sqsClient.SendMessage(context.Background(), &sqs.SendMessageInput{
+		QueueUrl:    paymentConfirmedQueueURL,
+		MessageBody: aws.String(string(eventBody)),
+	})
+	if sqsErr != nil {
+		logger.Error("Failed to publish payment_confirmed event", "payment_id", payment.ID, "error", sqsErr)
+	} else {
+		logger.Info("Payment confirmed", "payment_id", payment.ID, "rental_id", payment.RentalID, "payload", string(eventBody))
+	}
+
 	w.Header().Set(contentTypeHeader, contentTypeJSON)
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(payment)
 }
 
+func listRentalsHandler(w http.ResponseWriter, r *http.Request) {
+	page, size := 1, 30
+
+	if raw := r.URL.Query().Get("page"); raw != "" {
+		v, err := strconv.Atoi(raw)
+		if err != nil || v < 1 {
+			respondError(w, http.StatusBadRequest, "002C001", msgValidationError,
+				"Erro durante exibição da lista, tente novamente ou contate o suporte",
+				errors.New("page must be a positive integer"))
+			return
+		}
+		page = v
+	}
+	if raw := r.URL.Query().Get("size"); raw != "" {
+		v, err := strconv.Atoi(raw)
+		if err != nil || v < 1 || v > 100 {
+			respondError(w, http.StatusBadRequest, "002C002", msgValidationError,
+				"Erro durante exibição da lista, tente novamente ou contate o suporte",
+				errors.New("size must be between 1 and 100"))
+			return
+		}
+		size = v
+	}
+
+	offset := (page - 1) * size
+
+	var total int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM rentals`).Scan(&total); err != nil {
+		respondInternalError(w, "002I001", err)
+		return
+	}
+
+	rows, err := db.Query(
+		`SELECT id, vehicle_id, user_id, start_date, end_date, total_amount, payment_status, status
+		 FROM rentals ORDER BY start_date DESC LIMIT $1 OFFSET $2`,
+		size, offset,
+	)
+	if err != nil {
+		respondInternalError(w, "002I002", err)
+		return
+	}
+	defer rows.Close()
+
+	rentals := []Rental{}
+	for rows.Next() {
+		var rental Rental
+		if err := rows.Scan(&rental.ID, &rental.VehicleID, &rental.UserID,
+			&rental.StartDate, &rental.EndDate, &rental.TotalAmount,
+			&rental.PaymentStatus, &rental.Status); err != nil {
+			respondInternalError(w, "002I003", err)
+			return
+		}
+		rentals = append(rentals, rental)
+	}
+
+	w.Header().Set(contentTypeHeader, contentTypeJSON)
+	json.NewEncoder(w).Encode(RentalPaginatedResponse{Data: rentals, Page: page, Size: size, Total: total})
+}
+
+func resolveQueueURL(queueName string) *string {
+	for {
+		result, err := sqsClient.GetQueueUrl(context.Background(), &sqs.GetQueueUrlInput{
+			QueueName: aws.String(queueName),
+		})
+		if err != nil {
+			logger.Warn("SQS: queue not ready, retrying in 5s", "queue", queueName, "error", err)
+			time.Sleep(5 * time.Second)
+			continue
+		}
+		return result.QueueUrl
+	}
+}
+
+func initSQS() {
+	endpoint := getEnv("SQS_ENDPOINT", "http://localhost:4566")
+	region := getEnv("AWS_REGION", "us-east-1")
+
+	cfg, err := config.LoadDefaultConfig(context.Background(),
+		config.WithRegion(region),
+		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(
+			getEnv("AWS_ACCESS_KEY_ID", "test"),
+			getEnv("AWS_SECRET_ACCESS_KEY", "test"),
+			"",
+		)),
+	)
+	if err != nil {
+		logger.Error("SQS: failed to load AWS config", "error", err)
+		os.Exit(1)
+	}
+
+	sqsClient = sqs.NewFromConfig(cfg, func(o *sqs.Options) {
+		o.BaseEndpoint = aws.String(endpoint)
+	})
+
+	paymentConfirmedQueueURL = resolveQueueURL("payment_confirmed_fifo")
+	logger.Info("SQS producer ready", "queue", "payment_confirmed_fifo")
+}
+
+func startSQSConsumer() {
+	queueName := getEnv("SQS_QUEUE_NAME", "rental_created_fifo")
+	queueURL := resolveQueueURL(queueName)
+
+	logger.Info("SQS consumer started", "queue", queueName)
+
+	for {
+		result, err := sqsClient.ReceiveMessage(context.Background(), &sqs.ReceiveMessageInput{
+			QueueUrl:            queueURL,
+			MaxNumberOfMessages: 10,
+			WaitTimeSeconds:     5,
+		})
+		if err != nil {
+			logger.Error("SQS consumer: failed to receive messages", "error", err)
+			time.Sleep(5 * time.Second)
+			continue
+		}
+
+		for _, msg := range result.Messages {
+			msgID := aws.ToString(msg.MessageId)
+			logger.Info("SQS message received", "message_id", msgID)
+
+			var envelope struct {
+				EventType  string `json:"event_type"`
+				OccurredAt string `json:"occurred_at"`
+				Data       Rental `json:"data"`
+			}
+			if err := json.Unmarshal([]byte(aws.ToString(msg.Body)), &envelope); err != nil {
+				logger.Error("SQS consumer: failed to parse message", "message_id", msgID, "error", err)
+			} else {
+				_, err := db.Exec(
+					`INSERT INTO rentals (id, vehicle_id, user_id, start_date, end_date, total_amount, payment_status, status)
+					 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+					 ON CONFLICT (id) DO NOTHING`,
+					envelope.Data.ID, envelope.Data.VehicleID, envelope.Data.UserID,
+					envelope.Data.StartDate, envelope.Data.EndDate, envelope.Data.TotalAmount,
+					envelope.Data.PaymentStatus, envelope.Data.Status,
+				)
+				if err != nil {
+					logger.Error("SQS consumer: failed to save rental", "message_id", msgID, "error", err)
+				} else {
+					logger.Info("SQS consumer: rental saved", "rental_id", envelope.Data.ID)
+				}
+			}
+
+			_, err := sqsClient.DeleteMessage(context.Background(), &sqs.DeleteMessageInput{
+				QueueUrl:      queueURL,
+				ReceiptHandle: msg.ReceiptHandle,
+			})
+			if err != nil {
+				logger.Error("SQS consumer: failed to delete message", "message_id", msgID, "error", err)
+			}
+		}
+	}
+}
+
 func main() {
 	db = connectDB()
 	defer db.Close()
+
+	initSQS()
+	go startSQSConsumer()
 
 	_, err := db.Exec(`
 		CREATE TABLE IF NOT EXISTS payments (
@@ -259,8 +484,26 @@ func main() {
 		os.Exit(1)
 	}
 
+	_, err = db.Exec(`
+		CREATE TABLE IF NOT EXISTS rentals (
+			id             TEXT PRIMARY KEY,
+			vehicle_id     TEXT NOT NULL,
+			user_id        TEXT NOT NULL,
+			start_date     TIMESTAMPTZ NOT NULL,
+			end_date       TIMESTAMPTZ NOT NULL,
+			total_amount   NUMERIC NOT NULL,
+			payment_status TEXT NOT NULL,
+			status         TEXT NOT NULL
+		)
+	`)
+	if err != nil {
+		logger.Error("Failed to create rentals table", "error", err)
+		os.Exit(1)
+	}
+
 	http.Handle("GET /payments", http.HandlerFunc(listPaymentsHandler))
 	http.Handle("POST /payments", http.HandlerFunc(createPaymentHandler))
+	http.Handle("GET /rentals", http.HandlerFunc(listRentalsHandler))
 
 	logger.Info("Server started", "service", "payment-api", "port", 3005)
 	if err := http.ListenAndServe(":3005", nil); err != nil {
