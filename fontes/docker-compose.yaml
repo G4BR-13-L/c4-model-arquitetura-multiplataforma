@@ -193,9 +193,11 @@ services:
       AWS_ACCESS_KEY_ID: test
       AWS_SECRET_ACCESS_KEY: test
       SQS_QUEUE_NAME: rental_created_fifo
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
     depends_on:
       - payment-service-db
       - localstack
+      - jaeger
     restart: on-failure
     networks:
       - locacao-net
