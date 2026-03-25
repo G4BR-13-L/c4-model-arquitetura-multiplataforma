@@ -43,6 +43,8 @@ COPY --from=builder /app/config /app/config
 # Copia o script
 COPY scripts/entrypoint.sh ./scripts/entrypoint.sh
 
+COPY --from=builder /app/migrations /app/migrations
+
 RUN chmod +x ./scripts/entrypoint.sh
 
 EXPOSE 8080
