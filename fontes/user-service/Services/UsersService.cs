@@ -126,8 +126,8 @@ namespace UserService.API.Services
             await _emailNotification.SendAsync(
                 recipientEmail: "system@user-service.com.br",
                 recipientName: "System",
-                subject: $"Usuário {user.UserName} criado com sucesso.",
-                content: JsonSerializer.Serialize(UserCreatedDto.Create(user), new JsonSerializerOptions { WriteIndented = true }),
+                subject: $"Usuário criado",
+                content: $"Usuário {user.UserName} criado com sucesso.",                
                 queueName: _emailOptions.EmailNotificationQueueName);
 
             _logger.LogInformation("Usuário criado com sucesso");
