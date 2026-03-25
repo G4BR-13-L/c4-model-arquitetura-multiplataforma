@@ -18,8 +18,6 @@ EMAIL_CORRETO='{
   }
 }'
 
-# Alterado: localstack_main -> localstack
-# Adicionado: message-deduplication-id para permitir múltiplos testes seguidos
 docker exec -t localstack awslocal sqs send-message \
     --queue-url "$QUEUE_URL" \
     --message-body "$EMAIL_CORRETO" \
@@ -32,7 +30,6 @@ EMAIL_INCOMPLETO='{
   "content": "Isso vai falhar no parse do Serde"
 }'
 
-# Alterado: localstack_main -> localstack
 docker exec -t localstack awslocal sqs send-message \
     --queue-url "$QUEUE_URL" \
     --message-body "$EMAIL_INCOMPLETO" \
@@ -42,7 +39,6 @@ docker exec -t localstack awslocal sqs send-message \
 echo -e "\n--- 3. Enviando JSON MALFORMADO (Erro de Sintaxe) ---"
 JSON_QUEBRADO='{"subject": "Erro de syntax", "content": "faltando fechar chaves"'
 
-# Alterado: localstack_main -> localstack
 docker exec -t localstack awslocal sqs send-message \
     --queue-url "$QUEUE_URL" \
     --message-body "$JSON_QUEBRADO" \

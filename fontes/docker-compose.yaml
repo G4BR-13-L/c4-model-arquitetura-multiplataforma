@@ -222,11 +222,13 @@ services:
       - DATABASE_URL=postgres://postgres:postgres@notification-service-db:5432/notification_service
       - SQS_ENDPOINT_URL=http://localstack:4566
       - QUEUE_URL=http://localstack:4566/000000000000/notification_send_email.fifo
+      - SQLX_OFFLINE=true
     depends_on:
       notification-service-db:
         condition: service_healthy
       localstack:
         condition: service_started
+    entrypoint: ["./scripts/entrypoint.sh"]
     networks:
       - locacao-net
 

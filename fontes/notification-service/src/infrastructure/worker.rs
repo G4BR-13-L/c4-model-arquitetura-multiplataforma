@@ -1,9 +1,8 @@
 use aws_sdk_sqs::Client;
 use crate::domain::sqs_email::SQSEmailMessage;
-use crate::{application::service::email_error_service::EmailErrorService, domain::email::Email};
+use crate::{application::service::email_error_service::EmailErrorService};
 use crate::application::service::email_service::EmailService;
 use std::error::Error;
-use std::fmt::Display;
 use tracing::{info, error};
 
 pub async fn start_consumer(

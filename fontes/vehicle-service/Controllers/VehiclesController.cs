@@ -99,10 +99,10 @@ namespace VehicleService.API.Controllers
             _logger.LogInformation("Veículo com id {VehicleId} reservado com sucesso", id);
 
             await _emailNotification.SendAsync(
-                recipientEmail: string.Empty,
-                recipientName: string.Empty,
-                subject: $"Veículo {vehicle.Model} com placa {vehicle.LicensePlate} reservado.",
-                content: JsonSerializer.Serialize(VehicleReservedDto.Create(vehicle), new JsonSerializerOptions { WriteIndented = true }),
+                recipientEmail: "system@vehicle-service.com.br",
+                recipientName: "System",
+                subject: $"Veículo Reservado {vehicle.LicensePlate}",
+                content: $"Veículo {vehicle.Model} com placa {vehicle.LicensePlate} reservado em {DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss")}.",
                 queueName: _emailOptions.EmailNotificationQueueName);
 
             return NoContent();
@@ -124,6 +124,12 @@ namespace VehicleService.API.Controllers
                 return NotFound();
             }
 
+            if (vehicle.Available)
+            {
+                _logger.LogWarning("Veículo com id {VehicleId} já está disponível para reserva", id);
+                return BadRequest("Veículo já está disponível para reserva");
+            }
+
             vehicle.Return();
             await _context.SaveChangesAsync();
 
@@ -132,8 +138,8 @@ namespace VehicleService.API.Controllers
             await _emailNotification.SendAsync(
                 recipientEmail: "system@vehicle-service.com.br",
                 recipientName: "System",
-                subject: $"Veículo {vehicle.Model} com placa {vehicle.LicensePlate} devolvido.",
-                content: JsonSerializer.Serialize(VehicleReturnedDto.Create(vehicle), new JsonSerializerOptions { WriteIndented = true }),
+                subject: $"Veículo Reservado {vehicle.LicensePlate}",
+                content: $"Veículo {vehicle.Model} com placa {vehicle.LicensePlate} devolvido em {DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss")}.",                
                 queueName: _emailOptions.EmailNotificationQueueName);
 
             return NoContent();

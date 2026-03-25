@@ -1,23 +1,18 @@
-use chrono::{DateTime, NaiveDate, Utc};
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use sqlx::FromRow;
 use uuid::Uuid;
 
-use crate::domain::{
-    email::Email,
-    value_objects::{email_field::EmailField, name_field::NameField},
-};
+use crate::domain::{email::Email};
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct SQSEmailMessage {
-    #[serde(default = "Uuid::new_v4")] // Gera um ID interno se quiser trackear a mensagem
+    #[serde(default = "Uuid::new_v4")]
     pub id: Uuid,
 
     pub event_type: String,
 
     pub occurred_at: DateTime<Utc>,
 
-    #[serde(flatten)]
     pub data: Email,
 }
 
