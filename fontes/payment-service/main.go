@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"math/rand"
 	"net/http"
 	"os"
 	"strconv"
@@ -18,6 +19,10 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
 	"github.com/google/uuid"
 	_ "github.com/lib/pq"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 )
 
 const contentTypeHeader = "Content-Type"
@@ -252,26 +257,44 @@ func createPaymentHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	ctx := r.Context()
+	tracer := otel.Tracer("payment-service")
+
+	finalStatus := "CONFIRMED"
+	if rand.Intn(2) == 0 {
+		finalStatus = "FAILED"
+	}
+
 	payment := Payment{
 		ID:            uuid.NewString(),
 		RentalID:      dto.RentalID,
 		Amount:        dto.Amount,
 		PaymentMethod: dto.PaymentMethod,
-		Status:        "PENDING",
+		Status:        finalStatus,
 		CheckoutURL:   "https://puc.pay.me",
 		CreatedAt:     time.Now(),
 	}
 
-	_, err := db.Exec(
+	_, dbSpan := tracer.Start(ctx, "db.insert-payment")
+	dbSpan.SetAttributes(
+		attribute.String("payment.id", payment.ID),
+		attribute.String("payment.status", finalStatus),
+		attribute.String("payment.method", payment.PaymentMethod),
+	)
+	_, err := db.ExecContext(ctx,
 		`INSERT INTO payments (id, rental_id, amount, payment_method, status, checkout_url, created_at)
 		 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
 		payment.ID, payment.RentalID, payment.Amount, payment.PaymentMethod,
 		payment.Status, payment.CheckoutURL, payment.CreatedAt,
 	)
 	if err != nil {
+		dbSpan.RecordError(err)
+		dbSpan.SetStatus(codes.Error, err.Error())
+		dbSpan.End()
 		respondInternalError(w, "001I004", err)
 		return
 	}
+	dbSpan.End()
 
 	type paymentConfirmedData struct {
 		PaymentID string `json:"payment_id"`
@@ -279,8 +302,8 @@ func createPaymentHandler(w http.ResponseWriter, r *http.Request) {
 		Status    string `json:"status"`
 	}
 	type paymentConfirmedEvent struct {
-		EventType  string              `json:"event_type"`
-		OccurredAt string              `json:"occurred_at"`
+		EventType  string               `json:"event_type"`
+		OccurredAt string               `json:"occurred_at"`
 		Data       paymentConfirmedData `json:"data"`
 	}
 	eventBody, _ := json.Marshal(paymentConfirmedEvent{
@@ -289,18 +312,24 @@ func createPaymentHandler(w http.ResponseWriter, r *http.Request) {
 		Data: paymentConfirmedData{
 			PaymentID: payment.ID,
 			RentalID:  payment.RentalID,
-			Status:    "CONFIRMED",
+			Status:    finalStatus,
 		},
 	})
-	_, sqsErr := sqsClient.SendMessage(context.Background(), &sqs.SendMessageInput{
+
+	_, sqsSpan := tracer.Start(ctx, "sqs.publish-payment-confirmed")
+	sqsSpan.SetAttributes(attribute.String("messaging.destination", "payment_confirmed_fifo"))
+	_, sqsErr := sqsClient.SendMessage(ctx, &sqs.SendMessageInput{
 		QueueUrl:    paymentConfirmedQueueURL,
 		MessageBody: aws.String(string(eventBody)),
 	})
 	if sqsErr != nil {
+		sqsSpan.RecordError(sqsErr)
+		sqsSpan.SetStatus(codes.Error, sqsErr.Error())
 		logger.Error("Failed to publish payment_confirmed event", "payment_id", payment.ID, "error", sqsErr)
 	} else {
 		logger.Info("Payment confirmed", "payment_id", payment.ID, "rental_id", payment.RentalID, "payload", string(eventBody))
 	}
+	sqsSpan.End()
 
 	w.Header().Set(contentTypeHeader, contentTypeJSON)
 	w.WriteHeader(http.StatusCreated)
@@ -462,6 +491,9 @@ func startSQSConsumer() {
 }
 
 func main() {
+	shutdown := initTracer()
+	defer shutdown(context.Background())
+
 	db = connectDB()
 	defer db.Close()
 
@@ -501,9 +533,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	http.Handle("GET /payments", http.HandlerFunc(listPaymentsHandler))
-	http.Handle("POST /payments", http.HandlerFunc(createPaymentHandler))
-	http.Handle("GET /rentals", http.HandlerFunc(listRentalsHandler))
+	http.Handle("GET /payments", otelhttp.NewHandler(http.HandlerFunc(listPaymentsHandler), "GET /payments"))
+	http.Handle("POST /payments", otelhttp.NewHandler(http.HandlerFunc(createPaymentHandler), "POST /payments"))
+	http.Handle("GET /rentals", otelhttp.NewHandler(http.HandlerFunc(listRentalsHandler), "GET /rentals"))
 
 	logger.Info("Server started", "service", "payment-api", "port", 3005)
 	if err := http.ListenAndServe(":3005", nil); err != nil {
