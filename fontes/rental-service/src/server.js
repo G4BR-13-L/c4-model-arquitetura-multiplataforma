@@ -103,7 +103,7 @@ async function routeRequest(req, res) {
     const rental = await rentalService.createRental(authContext, body);
 
     sendJson(res, 201, rental, {
-      location: `/rentals/${rental.id}`
+      location: `/v1/rentals/${rental.id}`
     });
     return;
   }
@@ -149,15 +149,15 @@ function getInternalRentalEventId(pathname) {
 }
 
 function isCreateRentalRoute(pathname) {
-  return pathname === "/rentals" || pathname === "/v1/rental";
+  return pathname === "/v1/rentals";
 }
 
 function isListRentalsRoute(pathname) {
-  return pathname === "/rentals" || pathname === "/v1/rental";
+  return pathname === "/v1/rentals";
 }
 
 function getRentalIdFromPath(pathname) {
-  const matches = pathname.match(/^\/(?:rentals|v1\/rental)\/([0-9a-f-]+)$/i);
+  const matches = pathname.match(/^\/v1\/rentals\/([0-9a-f-]+)$/i);
   return matches?.[1] ?? null;
 }
 

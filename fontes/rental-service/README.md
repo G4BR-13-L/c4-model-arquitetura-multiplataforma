@@ -4,16 +4,10 @@ Servico de locacao em Node.js alinhado ao contrato revisado em `fontes/CONTRATOS
 
 ## Endpoints
 
-- `POST /rentals` cria uma locacao autenticada.
-- `GET /rentals` lista as locacoes do usuario autenticado.
-- `GET /rentals/{id}` retorna uma locacao do usuario autenticado.
+- `POST /v1/rentals` cria uma locacao autenticada.
+- `GET /v1/rentals` lista as locacoes do usuario autenticado.
+- `GET /v1/rentals/{id}` retorna uma locacao do usuario autenticado.
 - `GET /health` verifica o estado da aplicacao.
-
-Compatibilidade legada:
-
-- `POST /v1/rental`
-- `GET /v1/rental`
-- `GET /v1/rental/{id}`
 
 ## Variaveis de ambiente
 

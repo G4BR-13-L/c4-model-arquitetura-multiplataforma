@@ -106,7 +106,7 @@ Aqui está o fluxo revisado e padronizado, seguindo as convenções REST, com UU
 
 ## Rental Service
 
-### `POST /rentals` — criar locação *(autenticado)*
+### `POST /v1/rentals` — criar locação *(autenticado)*
 **Header:** `Authorization: Bearer <jwt>`
 
 **Request body:**
@@ -132,11 +132,11 @@ Aqui está o fluxo revisado e padronizado, seguindo as convenções REST, com UU
 }
 ```
 
-### `GET /rentals` — listar locações *(autenticado)*
+### `GET /v1/rentals` — listar locações *(autenticado)*
 **Header:** `Authorization: Bearer <jwt>`
 **Response `200 OK`:** array com o mesmo shape acima.
 
-### `GET /rentals/{id}` — buscar locação por ID *(autenticado)*
+### `GET /v1/rentals/{id}` — buscar locação por ID *(autenticado)*
 **Header:** `Authorization: Bearer <jwt>`
 **Response `200 OK`:** objeto único com o mesmo shape.
 
@@ -243,7 +243,7 @@ Veja o fluxo visual dos eventos assíncronos entre os serviços:---
 
 **IDs:** todos como `uuid` (v4), incluindo `rental_id` que estava como `String`.
 
-**Rotas REST:** recursos no plural e sem verbos na URL (`/rentals` em vez de `/rental`, `POST /rentals` em vez de `POST /vehicles/{id}/reservation`).
+**Rotas REST:** recursos no plural e sem verbos na URL (`/v1/rentals` em vez de `/rental`, `POST /v1/rentals` em vez de `POST /vehicles/{id}/reservation`).
 
 **Valores monetários:** `total_amount` como `number` (decimal, ex: `150.00`) em vez de `bigint` — evita problemas de serialização JSON e é adequado para valores em reais com centavos.
 

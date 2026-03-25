@@ -107,14 +107,6 @@ class KeycloakClient {
 
   validateClaims(claims) {
     const now = safeNowEpochSeconds();
-    const issuer = claims.iss;
-
-    if (issuer !== this.config.keycloakAuthority) {
-      const error = new Error("Invalid token issuer.");
-      error.statusCode = 401;
-      throw error;
-    }
-
     if (!claims.sub) {
       const error = new Error("Token subject is missing.");
       error.statusCode = 401;

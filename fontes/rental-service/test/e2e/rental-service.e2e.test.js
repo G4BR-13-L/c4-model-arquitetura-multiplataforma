@@ -232,7 +232,7 @@ function buildRentalPayload(vehicleId, overrides = {}) {
 
 async function postRental(vehicleId, token, overrides = {}) {
   const payload = buildRentalPayload(vehicleId, overrides);
-  return await rawRequest(buildUrl(ENV.rentalServiceUrl, "/rentals"), {
+  return await rawRequest(buildUrl(ENV.rentalServiceUrl, "/v1/rentals"), {
     method: "POST",
     headers: token ? { authorization: `Bearer ${token}` } : {},
     body: payload
@@ -244,14 +244,14 @@ async function createRental(vehicleId, token) {
 
   if (!response.ok) {
     const errorMessage = body?.message ?? body ?? "unknown";
-    throw new Error(`Request to ${buildUrl(ENV.rentalServiceUrl, "/rentals")} failed (${response.status}): ${errorMessage}`);
+    throw new Error(`Request to ${buildUrl(ENV.rentalServiceUrl, "/v1/rentals")} failed (${response.status}): ${errorMessage}`);
   }
 
   return body;
 }
 
 async function getRental(rentalId, token) {
-  return await requestJson(buildUrl(ENV.rentalServiceUrl, `/rentals/${rentalId}`), {
+  return await requestJson(buildUrl(ENV.rentalServiceUrl, `/v1/rentals/${rentalId}`), {
     method: "GET",
     headers: { authorization: `Bearer ${token}` }
   });
@@ -287,14 +287,14 @@ async function waitForVehicle(vehicleId, predicate, options = {}) {
 }
 
 async function getRentals(token) {
-  return await requestJson(buildUrl(ENV.rentalServiceUrl, "/rentals"), {
+  return await requestJson(buildUrl(ENV.rentalServiceUrl, "/v1/rentals"), {
     method: "GET",
     headers: { authorization: `Bearer ${token}` }
   });
 }
 
 async function fetchRentalRaw(rentalId, token) {
-  return await rawRequest(buildUrl(ENV.rentalServiceUrl, `/rentals/${rentalId}`), {
+  return await rawRequest(buildUrl(ENV.rentalServiceUrl, `/v1/rentals/${rentalId}`), {
     method: "GET",
     headers: token ? { authorization: `Bearer ${token}` } : {}
   });
@@ -477,14 +477,14 @@ test("payment.failure cancels the rental and returns the vehicle", { timeout: de
   assert.equal(returnedVehicle.available, true);
 });
 
-test("POST /rentals retorna Location e o corpo esperado", async () => {
+test("POST /v1/rentals retorna Location e o corpo esperado", async () => {
   const { token } = await createUserAndToken();
-  console.log("✅ validando Location/resposta de POST /rentals");
+  console.log("✅ validando Location/resposta de POST /v1/rentals");
   const vehicle = await pickAvailableVehicle(token);
 
   const { response, body } = await postRental(vehicle.id, token);
   assert.equal(response.status, 201);
-  assert.equal(response.headers.get("location"), `/rentals/${body.id}`);
+  assert.equal(response.headers.get("location"), `/v1/rentals/${body.id}`);
   assert.equal(body.vehicle_id, vehicle.id);
   assert.equal(body.payment_status, "PENDING");
   assert.equal(body.status, "PENDING");
@@ -492,9 +492,9 @@ test("POST /rentals retorna Location e o corpo esperado", async () => {
   assert.ok(body.id);
 });
 
-test("POST /rentals rejeita payloads inválidos", async () => {
+test("POST /v1/rentals rejeita payloads inválidos", async () => {
   const { token } = await createUserAndToken();
-  console.log("⚠️ testando payloads inválidos no POST /rentals");
+  console.log("⚠️ testando payloads inválidos no POST /v1/rentals");
   const invalidVehicle = await postRental(undefined, token);
   assert.equal(invalidVehicle.response.status, 400);
   assert.ok(
@@ -509,9 +509,9 @@ test("POST /rentals rejeita payloads inválidos", async () => {
   );
 });
 
-test("GET /rentals lista apenas as locações do usuário", async () => {
+test("GET /v1/rentals lista apenas as locações do usuário", async () => {
   const { token } = await createUserAndToken();
-  console.log("📋 validando GET /rentals para o usuário");
+  console.log("📋 validando GET /v1/rentals para o usuário");
   const vehicle = await pickAvailableVehicle(token);
   const rental = await createRental(vehicle.id, token);
 
@@ -523,9 +523,9 @@ test("GET /rentals lista apenas as locações do usuário", async () => {
   assert.equal(found.payment_status, "PENDING");
 });
 
-test("GET /rentals/{id} exige autenticação e isola usuários", async () => {
+test("GET /v1/rentals/{id} exige autenticação e isola usuários", async () => {
   const { token: ownerToken } = await createUserAndToken();
-  console.log("🔐 testando GET /rentals/{id} com e sem token");
+  console.log("🔐 testando GET /v1/rentals/{id} com e sem token");
   const { token: otherToken } = await createUserAndToken();
   const vehicle = await pickAvailableVehicle(ownerToken);
   const rental = await createRental(vehicle.id, ownerToken);
