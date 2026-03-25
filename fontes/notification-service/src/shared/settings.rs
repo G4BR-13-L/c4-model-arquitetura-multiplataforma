@@ -10,8 +10,8 @@ pub struct DatabaseConfig {
 pub struct Settings {
     pub database_url: String,
     pub jwt_secret: String,
-    pub sqs_endpoint_url: String, // Ex: http://localhost:4566
-    pub queue_url: String,        // Ex: http://localhost:4566/000.../fila.fifo
+    pub sqs_endpoint_url: String,
+    pub queue_url: String,
     pub show_time_tracing_logs: bool,
     pub time_tracing_logs_with_ansi: bool,
 }

@@ -67,19 +67,6 @@ impl From<sqlx::Error> for ApiError {
     }
 }
 
-impl From<jsonwebtoken::errors::Error> for ApiError {
-    fn from(_: jsonwebtoken::errors::Error) -> Self {
-        ApiError::Unauthorized("invalid_token".into())
-    }
-}
-
-impl From<reqwest::Error> for ApiError {
-    fn from(err: reqwest::Error) -> Self {
-        log::error!("HTTP Client error: {:?}", err);
-        ApiError::Internal(format!("external_api_error: {}", err))
-    }
-}
-
 impl From<std::env::VarError> for ApiError {
     fn from(err: std::env::VarError) -> Self {
         log::error!("Environment variable error: {:?}", err);
