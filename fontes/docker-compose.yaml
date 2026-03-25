@@ -233,10 +233,13 @@ services:
       - SQS_ENDPOINT_URL=http://localstack:4566
       - QUEUE_URL=http://localstack:4566/000000000000/notification_send_email.fifo
       - SQLX_OFFLINE=true
+      - JAEGER_URL=http://jaeger:4317
     depends_on:
       notification-service-db:
         condition: service_healthy
       localstack:
+        condition: service_started
+      jaeger:
         condition: service_started
     entrypoint: ["./scripts/entrypoint.sh"]
     networks:

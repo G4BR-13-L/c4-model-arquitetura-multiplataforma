@@ -12,6 +12,7 @@ pub struct Settings {
     pub jwt_secret: String,
     pub sqs_endpoint_url: String,
     pub queue_url: String,
+    pub jaeger_url: String,
     pub show_time_tracing_logs: bool,
     pub time_tracing_logs_with_ansi: bool,
 }

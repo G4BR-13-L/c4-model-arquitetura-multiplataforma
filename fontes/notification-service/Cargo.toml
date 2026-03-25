@@ -26,12 +26,19 @@ tracing-actix-web = "0.7.21"
 tracing-subscriber = { version = "0.3.22", features = ["env-filter", "chrono"] }
 uuid = { version = "1.20.0", features = ["v4", "serde"] }
 
+opentelemetry = "0.21"
+opentelemetry_sdk = { version = "0.21", features = ["rt-tokio"] }
+opentelemetry-otlp = "0.14"
+tracing-opentelemetry = "0.22"
+
 [profile.release]
-opt-level = 1           # Mantém alguma performance, mas compila muito mais rápido que o nível 3
-lto = "off"             # O "Link Time Optimization" é o maior vilão do tempo de build; desligue-o
-codegen-units = 16      # Aumentar para 16 ou mais permite compilar em paralelo (usa mais núcleos da CPU)
-panic = 'abort'         # Mantém o binário leve e evita overhead
-incremental = true      # Essencial para que pequenas mudanças no código não refaçam o binário do zero
+opt-level = 0          # Desativa quase todas as otimizações (Build muito mais rápido)
+lto = "off"            # Desliga a análise entre crates no link
+codegen-units = 256    # Valor máximo: divide o código em micro-pedaços para paralelizar ao extremo
+panic = 'abort'        # Remove a árvore de "unwinding", simplificando o binário
+incremental = true     # Reutiliza o que já foi compilado anteriormente
+debug = false          # Remove símbolos de debug que incham o processo de link
+strip = "none"         # Não gaste tempo limpando o binário, deixe-o "sujo" mesmo
 
 [lints.clippy]
 pedantic = "deny"
