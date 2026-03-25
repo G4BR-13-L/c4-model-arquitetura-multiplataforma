@@ -39,10 +39,9 @@ services:
   localstack:
     container_name: localstack
     # logging: driver: none  <-- Sugiro comentar isso para ver se o script roda!
-    image: localstack/localstack:stable
+    image: localstack/localstack:3.8
     environment:
       - REGION=us-east-1
-      - LOCALSTACK_ACKNOWLEDGE_ACCOUNT_REQUIREMENT=1
     ports:
       - "127.0.0.1:4566:4566"
       - "127.0.0.1:4510-4559:4510-4559"
@@ -189,8 +188,14 @@ services:
       DB_USER: postgres
       DB_PASSWORD: postgres
       DB_NAME: payment
+      SQS_ENDPOINT: http://localstack:4566
+      AWS_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      SQS_QUEUE_NAME: rental_created_fifo
     depends_on:
       - payment-service-db
+      - localstack
     restart: on-failure
     networks:
       - locacao-net
