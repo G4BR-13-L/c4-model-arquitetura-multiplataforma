@@ -2,9 +2,6 @@
 FROM lukemathwalker/cargo-chef:latest-rust-1.89 AS chef
 WORKDIR /app
 
-COPY scripts/entrypoint.sh /scripts/entrypoint.sh
-RUN chmod +x /scripts/entrypoint.sh
-
 # 2. Planejamento (Planner)
 FROM chef AS planner
 COPY Cargo.toml Cargo.lock ./
@@ -31,11 +28,23 @@ RUN cargo build --release --bin notification-service
 # 5. Imagem Final (Runtime)
 FROM debian:bookworm-slim AS runtime
 WORKDIR /app
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    ca-certificates libssl3 && rm -rf /var/lib/apt/lists/*
 
+# Instala libssl (pro Rust) e postgresql-client (pro entrypoint.sh)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    libssl3 \
+    postgresql-client \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copia o binário
 COPY --from=builder /app/target/release/notification-service /app/notification-service
+# Copia a pasta de configurações (importante para o Settings::new())
 COPY --from=builder /app/config /app/config
+# Copia o script
+COPY scripts/entrypoint.sh ./scripts/entrypoint.sh
+
+RUN chmod +x ./scripts/entrypoint.sh
 
 EXPOSE 8080
-ENTRYPOINT ["./notification-service"]
+# O ENTRYPOINT deve ser o script
+ENTRYPOINT ["./scripts/entrypoint.sh"]
