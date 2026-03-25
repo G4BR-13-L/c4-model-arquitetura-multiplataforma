@@ -28,5 +28,12 @@ module.exports = {
   paymentConfirmedQueueName: process.env.PAYMENT_CONFIRMED_QUEUE_NAME ?? "payment_confirmed_fifo",
   paymentEventsEnabled: getBoolean(process.env.PAYMENT_EVENTS_ENABLED, true),
   paymentPollingIntervalMs: Number(process.env.PAYMENT_POLLING_INTERVAL_MS ?? 5000),
-  jwksCacheTtlMs: Number(process.env.JWKS_CACHE_TTL_MS ?? 300000)
+  rentalEventCaptureEnabled: getBoolean(process.env.RENTAL_SERVICE_EVENT_CAPTURE, false),
+  rentalEventCaptureLimit: Number(process.env.MAX_CAPTURED_RENTAL_EVENTS ?? 64),
+  jwksCacheTtlMs: Number(process.env.JWKS_CACHE_TTL_MS ?? 300000),
+  openTelemetry: {
+    enabled: getBoolean(process.env.OPEN_TELEMETRY_ENABLED, true),
+    serviceName: process.env.OPEN_TELEMETRY_SERVICE_NAME ?? "rental-service",
+    otlpEndpoint: process.env.OPEN_TELEMETRY_OTLP_ENDPOINT ?? "http://localhost:4317"
+  }
 };

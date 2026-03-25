@@ -143,12 +143,16 @@ services:
       KEYCLOAK_CLIENT_ID: rental-service-api
       KEYCLOAK_CLIENT_SECRET: YWjsmDWVGhyTLsoLtsLjPouLv46eeNkw
       KEYCLOAK_ALLOWED_CLIENT_IDS: locadora-backend,account,user-service-api
+      OPEN_TELEMETRY_ENABLED: "true"
+      OPEN_TELEMETRY_SERVICE_NAME: rental-service
+      OPEN_TELEMETRY_OTLP_ENDPOINT: http://jaeger:4317
       SQS_ENDPOINT: http://localstack:4566
       AWS_REGION: us-east-1
       AWS_ACCESS_KEY_ID: test
       AWS_SECRET_ACCESS_KEY: test
       RENTAL_CREATED_QUEUE_NAME: rental_created_fifo
       PAYMENT_CONFIRMED_QUEUE_NAME: payment_confirmed_fifo
+      RENTAL_SERVICE_EVENT_CAPTURE: "true"
       RENTAL_SERVICE_URL: http://localhost:8080
       USER_SERVICE_URL: http://user-service-api:8080
       VEHICLE_SERVICE_URL: http://vehicle-service-api:8080

@@ -16,6 +16,10 @@ class RentalEventPublisher {
       endpoint: config.sqsEndpoint,
       protocol: AwsQueryProtocol
     });
+    this.captureEnabled = Boolean(config.rentalEventCaptureEnabled);
+    this.captureLimit = Number(config.rentalEventCaptureLimit ?? 64);
+    this.capturedEvents = new Map();
+    this.captureOrder = [];
   }
 
   async publishRentalCreated(rental) {
@@ -45,6 +49,8 @@ class RentalEventPublisher {
         queue_name: this.queueName,
         rental_id: rental.id
       });
+
+      this.captureEvent(event);
     } catch (error) {
       this.logger.warn("rental_created_event_publish_failed", {
         queue_name: this.queueName,
@@ -52,6 +58,39 @@ class RentalEventPublisher {
         error: error.message
       });
     }
+  }
+
+  captureEvent(event) {
+    if (!this.captureEnabled) {
+      return;
+    }
+
+    const rentalId = event?.data?.id;
+    if (!rentalId) {
+      return;
+    }
+
+    if (this.capturedEvents.has(rentalId)) {
+      return;
+    }
+
+    this.capturedEvents.set(rentalId, event);
+    this.captureOrder.push(rentalId);
+
+    if (this.captureOrder.length > this.captureLimit) {
+      const oldest = this.captureOrder.shift();
+      if (oldest) {
+        this.capturedEvents.delete(oldest);
+      }
+    }
+  }
+
+  getCapturedEvent(rentalId) {
+    return this.capturedEvents.get(rentalId) ?? null;
+  }
+
+  isCaptureEnabled() {
+    return this.captureEnabled;
   }
 
   async getQueueUrl() {

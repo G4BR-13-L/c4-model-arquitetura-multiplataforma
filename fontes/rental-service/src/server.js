@@ -1,3 +1,4 @@
+require("./tracing");
 const http = require("node:http");
 const { URL } = require("node:url");
 
@@ -38,6 +39,7 @@ const server = http.createServer(async (req, res) => {
 async function routeRequest(req, res) {
   const requestUrl = new URL(req.url, `http://${req.headers.host ?? "localhost"}`);
   const pathname = trimTrailingSlash(requestUrl.pathname);
+  const internalEventRentalId = getInternalRentalEventId(pathname);
 
   if (req.method === "GET" && pathname === "/health") {
     sendJson(res, 200, {
@@ -45,6 +47,53 @@ async function routeRequest(req, res) {
       status: "ok",
       timestamp: new Date().toISOString()
     });
+    return;
+  }
+
+  if (req.method === "GET" && internalEventRentalId) {
+    if (!eventPublisher.isCaptureEnabled()) {
+      sendEmpty(res, 404);
+      return;
+    }
+
+    const event = eventPublisher.getCapturedEvent(internalEventRentalId);
+    if (!event) {
+      sendEmpty(res, 404);
+      return;
+    }
+
+    sendJson(res, 200, event);
+    return;
+  }
+
+  if (req.method === "POST" && pathname === "/internal/events/payment") {
+    if (!eventPublisher.isCaptureEnabled()) {
+      sendEmpty(res, 404);
+      return;
+    }
+
+    const body = await readJsonBody(req);
+    const rentalId = body?.rental_id;
+    const status = body?.status;
+
+    if (!rentalId || !status) {
+      sendJson(res, 400, {
+        message: "rental_id and status are required."
+      });
+      return;
+    }
+
+    const event = {
+      event_type: "payment.confirmed",
+      occurred_at: new Date().toISOString(),
+      data: {
+        rental_id: rentalId,
+        status
+      }
+    };
+
+    await rentalService.handlePaymentEvent(event);
+    sendEmpty(res, 204);
     return;
   }
 
@@ -92,6 +141,11 @@ function trimTrailingSlash(pathname) {
   }
 
   return pathname;
+}
+
+function getInternalRentalEventId(pathname) {
+  const matches = pathname.match(/^\/internal\/events\/rental-created\/([0-9a-f-]+)$/i);
+  return matches?.[1] ?? null;
 }
 
 function isCreateRentalRoute(pathname) {

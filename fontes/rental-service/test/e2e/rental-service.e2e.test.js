@@ -3,7 +3,6 @@ const { test } = require("node:test");
 const { randomUUID } = require("node:crypto");
 const {
   SQSClient,
-  SendMessageCommand,
   ReceiveMessageCommand,
   GetQueueUrlCommand,
   CreateQueueCommand,
@@ -162,7 +161,7 @@ async function createUserAndToken() {
   return { ...credentials, token };
 }
 
-async function pickAvailableVehicle() {
+async function listVehicles() {
   const vehicles = await requestJson(buildUrl(ENV.vehicleServiceUrl, VEHICLE_BASE_PATH), {
     method: "GET"
   });
@@ -171,7 +170,48 @@ async function pickAvailableVehicle() {
     throw new Error("Vehicle service returned invalid list");
   }
 
-  const available = vehicles.find((vehicle) => vehicle.available);
+  return vehicles;
+}
+
+async function returnVehicle(vehicleId, token) {
+  const { response, body, text } = await rawRequest(buildUrl(ENV.vehicleServiceUrl, `${VEHICLE_BASE_PATH}/${vehicleId}/return`), {
+    method: "PUT",
+    headers: { authorization: `Bearer ${token}` }
+  });
+
+  if (response.status === 400) {
+    return;
+  }
+
+  if (!response.ok) {
+    const message = body?.message ?? body ?? text ?? "unknown";
+    throw new Error(`Returning vehicle ${vehicleId} failed (${response.status}): ${message}`);
+  }
+}
+
+async function tryReleaseReservedVehicle(vehicles, token) {
+  if (!token) {
+    return;
+  }
+
+  const reserved = vehicles.find((vehicle) => vehicle.available === false);
+  if (!reserved) {
+    return;
+  }
+
+  await returnVehicle(reserved.id, token);
+}
+
+async function pickAvailableVehicle(token) {
+  let vehicles = await listVehicles();
+  let available = vehicles.find((vehicle) => vehicle.available);
+
+  if (!available && token) {
+    await tryReleaseReservedVehicle(vehicles, token);
+    vehicles = await listVehicles();
+    available = vehicles.find((vehicle) => vehicle.available);
+  }
+
   if (!available) {
     throw new Error("No available vehicle found");
   }
@@ -320,52 +360,44 @@ async function deleteMessage(queueUrl, receiptHandle) {
   await sqsClient.send(new DeleteMessageCommand({ QueueUrl: queueUrl, ReceiptHandle: receiptHandle }));
 }
 
-async function expectRentalCreatedEvent(rentalId, { timeout = MAX_WAIT_MS } = {}) {
+async function expectRentalCreatedEvent(rentalId, { timeout = MAX_WAIT_MS, interval = WAIT_INTERVAL_MS } = {}) {
   const deadline = Date.now() + timeout;
-  while (Date.now() < deadline) {
-    const response = await sqsClient.send(new ReceiveMessageCommand({
-      QueueUrl: rentalQueueUrl,
-      MaxNumberOfMessages: 10,
-      WaitTimeSeconds: 5
-    }));
+  const eventUrl = buildUrl(ENV.rentalServiceUrl, `/internal/events/rental-created/${rentalId}`);
 
-    const messages = response.Messages ?? [];
-    for (const message of messages) {
-      const body = message.Body;
-      if (body) {
-        try {
-          const event = JSON.parse(body);
-          if (event.data?.id === rentalId) {
-            await deleteMessage(rentalQueueUrl, message.ReceiptHandle);
-            return event;
-          }
-        } catch (error) {
-          // ignore malformed messages
-        }
+  while (Date.now() < deadline) {
+    try {
+      const { response, body } = await rawRequest(eventUrl, { method: "GET" });
+      if (response.status === 200) {
+        return body;
       }
-      await deleteMessage(rentalQueueUrl, message.ReceiptHandle);
+    } catch (error) {
+      // service might not be ready yet; continue polling
     }
 
-    await sleep(1_000);
+    await sleep(interval);
   }
 
   throw new Error(`Did not receive rental.created event for ${rentalId} within ${timeout}ms`);
 }
 
 async function sendPaymentEvent(rentalId, status) {
-  const event = {
-    event_type: "payment.confirmed",
-    occurred_at: new Date().toISOString(),
-    data: {
-      rental_id: rentalId,
-      status
+  const { response, body } = await rawRequest(
+    buildUrl(ENV.rentalServiceUrl, "/internal/events/payment"),
+    {
+      method: "POST",
+      body: {
+        rental_id: rentalId,
+        status
+      }
     }
-  };
+  );
 
-  await sqsClient.send(new SendMessageCommand({
-    QueueUrl: paymentQueueUrl,
-    MessageBody: JSON.stringify(event)
-  }));
+  if (!response.ok) {
+    const errorMessage = body?.message ?? body ?? "unknown";
+    throw new Error(
+      `Payment event ${status} for ${rentalId} failed (${response.status}): ${errorMessage}`
+    );
+  }
 }
 
 function sleep(ms) {
@@ -387,12 +419,14 @@ test.beforeEach(async () => {
   await purgeQueue(paymentQueueUrl);
 });
 
-test("rental creation publishes an event and honors payment.confirmed", { timeout: 180000 }, async () => {
+const defaultTimeout = 20000;
+
+test("rental creation publishes an event and honors payment.confirmed", { timeout: defaultTimeout }, async () => {
   const { username, password } = await createTestUser();
   console.log("⏳ rental + payment flow: usuário criado", username);
   const token = await login(username, password);
   console.log("🔐 token obtido, escolhendo veículo disponível");
-  const vehicle = await pickAvailableVehicle();
+  const vehicle = await pickAvailableVehicle(token);
   console.log("🚗 veículo", vehicle.id, "selecionado, criando locação");
   const rental = await createRental(vehicle.id, token);
 
@@ -418,12 +452,12 @@ test("rental creation publishes an event and honors payment.confirmed", { timeou
   assert.equal(reservedVehicle.available, false, "Vehicle should stay reserved after payment success");
 });
 
-test("payment.failure cancels the rental and returns the vehicle", { timeout: 180000 }, async () => {
+test("payment.failure cancels the rental and returns the vehicle", { timeout: defaultTimeout }, async () => {
   const { username, password } = await createTestUser();
   console.log("⏳ payment failure: criando usuário", username);
   const token = await login(username, password);
   console.log("🔐 token pronto, escolhendo veículo");
-  const vehicle = await pickAvailableVehicle();
+  const vehicle = await pickAvailableVehicle(token);
   console.log("🚗 criando locação para falha");
   const rental = await createRental(vehicle.id, token);
 
@@ -446,7 +480,7 @@ test("payment.failure cancels the rental and returns the vehicle", { timeout: 18
 test("POST /rentals retorna Location e o corpo esperado", async () => {
   const { token } = await createUserAndToken();
   console.log("✅ validando Location/resposta de POST /rentals");
-  const vehicle = await pickAvailableVehicle();
+  const vehicle = await pickAvailableVehicle(token);
 
   const { response, body } = await postRental(vehicle.id, token);
   assert.equal(response.status, 201);
@@ -467,7 +501,7 @@ test("POST /rentals rejeita payloads inválidos", async () => {
     invalidVehicle.body?.message?.includes("vehicle_id must be a valid UUID.")
   );
 
-  const vehicle = await pickAvailableVehicle();
+  const vehicle = await pickAvailableVehicle(token);
   const invalidDate = await postRental(vehicle.id, token, { start_date: "" });
   assert.equal(invalidDate.response.status, 400);
   assert.ok(
@@ -478,7 +512,7 @@ test("POST /rentals rejeita payloads inválidos", async () => {
 test("GET /rentals lista apenas as locações do usuário", async () => {
   const { token } = await createUserAndToken();
   console.log("📋 validando GET /rentals para o usuário");
-  const vehicle = await pickAvailableVehicle();
+  const vehicle = await pickAvailableVehicle(token);
   const rental = await createRental(vehicle.id, token);
 
   const rentals = await getRentals(token);
@@ -493,7 +527,7 @@ test("GET /rentals/{id} exige autenticação e isola usuários", async () => {
   const { token: ownerToken } = await createUserAndToken();
   console.log("🔐 testando GET /rentals/{id} com e sem token");
   const { token: otherToken } = await createUserAndToken();
-  const vehicle = await pickAvailableVehicle();
+  const vehicle = await pickAvailableVehicle(ownerToken);
   const rental = await createRental(vehicle.id, ownerToken);
 
   const ownerDetail = await getRental(rental.id, ownerToken);
