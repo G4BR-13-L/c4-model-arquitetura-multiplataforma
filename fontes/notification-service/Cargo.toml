@@ -5,15 +5,11 @@ edition = "2024"
 
 [dependencies]
 actix-web = "4.12.1"
-async-trait = "0.1.89"
 aws-config = { version = "1.8.13", features = ["behavior-version-latest"] }
 aws-sdk-sqs = "1.93.0"
 chrono = {version = "0.4.43", features = ["serde"]}
-chrono-tz = "0.10.4"
 config = "0.15.19"
 dotenv = "0.15.0"
-env = "1.0.1"
-env_logger = "0.11.8"
 log = "0.4.29"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
@@ -24,12 +20,10 @@ sqlx = { version = "0.8.6", features= [
 "macros",
 "chrono"
 ]}
-thiserror = "2.0.18"
 tokio = { version = "1.49.0", features = ["full"] }
 tracing = "0.1.44"
 tracing-actix-web = "0.7.21"
 tracing-subscriber = { version = "0.3.22", features = ["env-filter", "chrono"] }
-unicode-normalization = "0.1.25"
 uuid = { version = "1.20.0", features = ["v4", "serde"] }
 
 [profile.release]
