@@ -143,12 +143,17 @@ services:
       KEYCLOAK_AUTHORITY: http://keycloak:8080/realms/master
       KEYCLOAK_CLIENT_ID: rental-service-api
       KEYCLOAK_CLIENT_SECRET: YWjsmDWVGhyTLsoLtsLjPouLv46eeNkw
+      KEYCLOAK_ALLOWED_CLIENT_IDS: locadora-backend,account,user-service-api
       SQS_ENDPOINT: http://localstack:4566
       AWS_REGION: us-east-1
       AWS_ACCESS_KEY_ID: test
       AWS_SECRET_ACCESS_KEY: test
       RENTAL_CREATED_QUEUE_NAME: rental_created_fifo
       PAYMENT_CONFIRMED_QUEUE_NAME: payment_confirmed_fifo
+      RENTAL_SERVICE_URL: http://localhost:8080
+      USER_SERVICE_URL: http://user-service-api:8080
+      VEHICLE_SERVICE_URL: http://vehicle-service-api:8080
+      PAYMENT_SERVICE_URL: http://payment-service-api:3005
     volumes:
       - ./rental-service/src:/app/src:delegated
     networks:
